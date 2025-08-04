@@ -1,0 +1,29 @@
+# Cursor Rules for Short Commit Messages
+
+## Commit Message Guidelines
+- Generate commit messages that are UNDER 50 characters for the subject line
+- Use imperative mood: "Add feature" not "Added feature"
+- Be concise and focus on the main change only
+- Use conventional commit types: feat, fix, docs, style, refactor, test, chore
+- Avoid unnecessary details in the subject line
+- If more context is needed, add it in the commit body, not the subject
+
+## Examples of Good Short Commit Messages:
+- `feat: add user login`
+- `fix: resolve button click bug`
+- `docs: update README`
+- `style: format code`
+- `refactor: simplify component`
+- `test: add unit tests`
+- `chore: update dependencies`
+
+## Examples of Bad Commit Messages (too long):
+- `feat: implement comprehensive user authentication system with JWT tokens and password hashing`
+- `fix: resolve the issue where the button doesn't respond to click events in the user interface`
+
+## When generating commit messages:
+1. Analyze the changes made
+2. Identify the primary change type (feat/fix/docs/etc.)
+3. Write a concise description in imperative mood
+4. Keep it under 50 characters
+5. Focus on what was changed, not why or how 

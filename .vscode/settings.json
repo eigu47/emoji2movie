@@ -26,5 +26,8 @@
   },
   "[html]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
-  }
+  },
+  "cursor.commitMessagePrompt": "Generate a very short commit message (under 50 characters) that describes the changes. Use imperative mood and be concise. Focus on the main change only.",
+  "cursor.commitMessageMaxLength": 50,
+  "cursor.commitMessageStyle": "conventional-short"
 }
