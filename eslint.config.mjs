@@ -25,7 +25,7 @@ const eslintConfig = [
       prettier,
     },
     rules: {
-      'prettier/prettier': 'warn',
+      // 'prettier/prettier': 'warn',
       'react/react-in-jsx-scope': 'off',
     },
   },
