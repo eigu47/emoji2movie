@@ -19,7 +19,7 @@ export const movie = sqliteTable(
     posterPath: text(),
     backdropPath: text(),
     releaseDate: text(),
-    // genreIds: [878, 53],
+    genreIds: text({ mode: 'json' }).$type<number[]>(),
     adult: integer({ mode: 'boolean' }),
     video: integer({ mode: 'boolean' }),
     popularity: real(),
