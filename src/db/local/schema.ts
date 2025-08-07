@@ -1,3 +1,4 @@
+import { relations } from 'drizzle-orm';
 import {
   index,
   integer,
@@ -12,19 +13,19 @@ export const movie = sqliteTable(
   'movie',
   {
     id: integer().primaryKey(),
-    title: text(),
-    originalTitle: text(),
-    originalLanguage: text(),
-    overview: text(),
-    posterPath: text(),
-    backdropPath: text(),
-    releaseDate: text(),
-    genreIds: text({ mode: 'json' }).$type<number[]>(),
-    adult: integer({ mode: 'boolean' }),
-    video: integer({ mode: 'boolean' }),
-    popularity: real(),
-    voteAverage: real(),
-    voteCount: integer(),
+    title: text().notNull(),
+    originalTitle: text().notNull(),
+    originalLanguage: text().notNull(),
+    overview: text().notNull(),
+    posterPath: text().notNull(),
+    backdropPath: text().notNull(),
+    releaseDate: text().notNull(),
+    genreIds: text({ mode: 'json' }).$type<number[]>().notNull(),
+    adult: integer({ mode: 'boolean' }).notNull(),
+    video: integer({ mode: 'boolean' }).notNull(),
+    popularity: real().notNull(),
+    voteAverage: real().notNull(),
+    voteCount: integer().notNull(),
   },
   (m) => [index('title_idx').on(m.title)]
 );
@@ -33,7 +34,7 @@ export const genre = sqliteTable(
   'genre',
   {
     id: integer().primaryKey(),
-    name: text(),
+    name: text().notNull(),
   },
   (g) => [unique().on(g.name)]
 );
@@ -46,3 +47,22 @@ export const movie_genre = sqliteTable(
   },
   (mg) => [primaryKey({ columns: [mg.genreId, mg.movieId] })]
 );
+
+export const movieRelations = relations(movie, ({ many }) => ({
+  movieGenres: many(movie_genre),
+}));
+
+export const genreRelations = relations(genre, ({ many }) => ({
+  movieGenres: many(movie_genre),
+}));
+
+export const movieGenreRelations = relations(movie_genre, ({ one }) => ({
+  movie: one(movie, {
+    fields: [movie_genre.movieId],
+    references: [movie.id],
+  }),
+  genre: one(genre, {
+    fields: [movie_genre.genreId],
+    references: [genre.id],
+  }),
+}));

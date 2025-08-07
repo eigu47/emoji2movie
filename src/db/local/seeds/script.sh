@@ -2,10 +2,10 @@
 set -e
 set -o pipefail
 
-genres_seed="./src/db/seeds/genres.sql"
-tmdb_response="./src/db/seeds/tmdb.json"
-movies_seed="./src/db/seeds/movies.sql"
-movie_genre_seed="./src/db/seeds/movie_genre.sql"
+genres_seed="./src/db/local/seeds/genres.sql"
+tmdb_response="./src/db/local/seeds/tmdb.json"
+movies_seed="./src/db/local/seeds/movies.sql"
+movie_genre_seed="./src/db/local/seeds/movie_genre.sql"
 
 # Scrape TMDB genres
 curl --fail -s --request GET \
@@ -42,6 +42,12 @@ jq -r '
   (
     .results
     | add
+    | map(select(
+      values
+      | all(
+        . != null and . != "" and . != []
+      )
+    ))
     | map(
       "(" + (
         map(
@@ -60,9 +66,13 @@ jq -r '
   (
     .results
     | add
-    | map(
-      select(.genre_ids | length > 0)
-      | .id as $id
+    | map(select(
+      values
+      | all(
+        . != null and . != "" and . != []
+      )
+    ))
+    | map(.id as $id
       | .genre_ids
       | map("(\($id), \(.))")
       | join(",\n")
