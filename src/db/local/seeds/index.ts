@@ -9,8 +9,10 @@ const SEEDS = {
 
 async function main() {
   async function runSeed(seed: keyof typeof SEEDS) {
+    console.log(`Running ${seed} seed...`);
     const sql = fs.readFileSync(SEEDS[seed], 'utf8');
     await localDb.run(sql);
+    console.log(`${seed} seed complete`);
   }
 
   await runSeed('genres');
