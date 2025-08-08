@@ -7,17 +7,17 @@ const SEEDS = {
   movieGenre: './src/db/local/seeds/movie_genre.sql',
 };
 
-async function main() {
-  async function runSeed(seed: keyof typeof SEEDS) {
+function main() {
+  function runSeed(seed: keyof typeof SEEDS) {
     console.log(`Running ${seed} seed...`);
     const sql = fs.readFileSync(SEEDS[seed], 'utf8');
-    await localDb.run(sql);
+    localDb.run(sql);
     console.log(`${seed} seed complete`);
   }
 
-  await runSeed('genres');
-  await runSeed('movies');
-  await runSeed('movieGenre');
+  runSeed('genres');
+  runSeed('movies');
+  runSeed('movieGenre');
 }
 
-main().catch(console.error);
+main();

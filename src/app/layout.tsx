@@ -32,7 +32,7 @@ export default function RootLayout({
         className={cn(
           geistSans.variable,
           geistMono.variable,
-          'min-h-dvh bg-gradient-to-br from-gray-900 via-purple-900 to-gray-800 antialiased'
+          'min-h-dvh overflow-y-hidden bg-gradient-to-br from-gray-900 via-purple-900 to-gray-800 antialiased'
         )}
       >
         {children}

@@ -6,6 +6,7 @@
   },
   "prettier.requireConfig": true,
   "prettier.useEditorConfig": false,
+  "prettier.configPath": "prettier.config.mjs",
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
