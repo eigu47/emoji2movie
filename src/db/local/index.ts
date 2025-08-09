@@ -1,12 +1,12 @@
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import path from 'path';
+import env from '@/lib/env';
+import { drizzle } from 'drizzle-orm/libsql';
 import * as schema from './schema';
 
-const client = new Database(path.join(process.cwd(), 'local-db.db'));
-
 const localDb = drizzle({
-  client,
+  connection: {
+    url: env.TURSO_CONNECTION_URL,
+    authToken: env.TURSO_AUTH_TOKEN,
+  },
   schema,
   casing: 'snake_case',
 });

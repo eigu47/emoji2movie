@@ -2,14 +2,12 @@
   "name": "emoji2movie",
   "version": "0.1.0",
   "private": true,
-  "engines": {
-    "node": ">=20"
-  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "db:local": "wsl bash -l -c 'turso dev --db-file local-db.db'",
     "db:local:generate": "drizzle-kit generate --config drizzle.local.config.ts",
     "db:local:migrate": "drizzle-kit migrate --config drizzle.local.config.ts",
     "db:local:push": "drizzle-kit push --config drizzle.local.config.ts",
