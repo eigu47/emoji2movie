@@ -2,10 +2,10 @@
 set -e
 set -o pipefail
 
-tmdb_response="./src/db/local/tools/tmdb.json"
-genres_seed="./src/db/local/seeds/genres.sql"
-movies_seed="./src/db/local/seeds/movies.sql"
-movie_genre_seed="./src/db/local/seeds/movie_genre.sql"
+tmdb_response="./src/db/tools/tmdb.json"
+genres_seed="./src/db/seeds/genres.sql"
+movies_seed="./src/db/seeds/movies.sql"
+movie_genre_seed="./src/db/seeds/movie_genre.sql"
 
 # Scrape TMDB genres
 curl --fail -s --request GET \

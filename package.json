@@ -7,12 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:local": "wsl bash -l -c 'turso dev --db-file local-db.db'",
-    "db:local:generate": "drizzle-kit generate --config drizzle.local.config.ts",
-    "db:local:migrate": "drizzle-kit migrate --config drizzle.local.config.ts",
-    "db:local:push": "drizzle-kit push --config drizzle.local.config.ts",
-    "db:local:studio": "drizzle-kit studio --config drizzle.local.config.ts",
-    "db:local:seed": "npx ts-node src/db/local/seeds/index.ts"
+    "db": "wsl bash -l -c 'turso dev --db-file local-db.db'",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "npx ts-node src/db/seeds/index.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.15.10",

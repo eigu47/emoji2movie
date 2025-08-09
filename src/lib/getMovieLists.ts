@@ -1,4 +1,4 @@
-import localDb from '@/db/local';
+import db from '@/db';
 import { unstable_cache } from 'next/cache';
 
 export const getAllMovies = unstable_cache(async () =>
@@ -6,7 +6,7 @@ export const getAllMovies = unstable_cache(async () =>
 );
 
 export function getMovieLists(ids: number[] | undefined) {
-  return localDb.query.movie.findMany({
+  return db.query.movie.findMany({
     columns: {
       id: true,
       title: true,
