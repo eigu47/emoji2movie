@@ -1,5 +1,5 @@
+import db from '@/db';
 import fs from 'fs';
-import db from '../index';
 
 const SEEDS = {
   genres: './src/db/seeds/genres.sql',
@@ -7,17 +7,20 @@ const SEEDS = {
   movieGenre: './src/db/seeds/movie_genre.sql',
 };
 
-function main() {
-  function runSeed(seed: keyof typeof SEEDS) {
-    console.log(`Running ${seed} seed...`);
-    const sql = fs.readFileSync(SEEDS[seed], 'utf8');
-    db.run(sql);
-    console.log(`${seed} seed complete`);
-  }
-
-  runSeed('genres');
-  runSeed('movies');
-  runSeed('movieGenre');
+async function runSeed(seed: keyof typeof SEEDS) {
+  console.log(`Running ${seed} seed...`);
+  const sql = fs.readFileSync(SEEDS[seed], 'utf8');
+  await db.run(sql);
+  console.log(`${seed} seed complete`);
 }
 
-main();
+async function main() {
+  await runSeed('genres');
+  await runSeed('movies');
+  await runSeed('movieGenre');
+}
+
+main().catch((err: unknown) => {
+  console.error(err);
+  process.exit(1);
+});
