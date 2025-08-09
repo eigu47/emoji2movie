@@ -1,15 +1,11 @@
 import { ClientWrapper } from '@/app/play/ClientWrapper';
-import { getGameState } from '@/app/play/getGameState';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getAllMovies } from '@/lib/getMovieLists';
+import { getGameState } from '@/server/gameState';
 import SubmitForm from './SubmitForm';
 
 export default async function Play() {
-  const [gameState, movieList] = await Promise.all([
-    getGameState(),
-    getAllMovies(),
-  ]);
+  const gameState = await getGameState();
   const { movieIds } = gameState;
   const totalQuestions = 10;
 
@@ -51,7 +47,7 @@ export default async function Play() {
             <p className="rounded-lg bg-gray-700 p-6 text-center text-6xl shadow-sm">
               🌸
             </p>
-            <SubmitForm movieList={movieList} />
+            <SubmitForm />
           </CardContent>
         </Card>
       </div>

@@ -2,10 +2,11 @@
 set -e
 set -o pipefail
 
-tmdb_response="./src/db/tools/tmdb.json"
+tmdb_response="./src/db/tmdb.json"
 genres_seed="./src/db/seeds/genres.sql"
 movies_seed="./src/db/seeds/movies.sql"
 movie_genre_seed="./src/db/seeds/movie_genre.sql"
+movies_list="./src/constants/movie-list.ts"
 
 # Scrape TMDB genres
 curl --fail -s --request GET \
@@ -80,23 +81,22 @@ jq -r '
   ) + ";"
 ' "$tmdb_response" > "$movie_genre_seed"
 
-# movies_list="./src/constants/movies-list.ts"
 # Generate movies list for autocomplete
-# jq -r '
-#   "export const MOVIE_LIST: MovieList[] = " +
-#   (
-#     .results
-#     | add
-#     | map(select(
-#       values
-#       | all(
-#         . != null and . != "" and . != []
-#       )
-#     ))
-#     | map({
-#       id,
-#       title,
-#       year: (.release_date | split("-")[0] | tonumber)
-#     }) | tostring) + ";\n" +
-#   "export type MovieList = { id: number, title: string, year: number };"
-# ' "$tmdb_response" > "$movies_list"
+jq -r '
+  "export const MOVIE_LIST: { id: number, title: string, vote: number, year: number }[] =\n" +
+  (
+    .results
+    | add
+    | map(select(
+      values
+      | all(
+        . != null and . != "" and . != []
+      )
+    ))
+    | map({
+      id,
+      title,
+      vote: .vote_count,
+      year: (.release_date | split("-")[0] | tonumber)
+    }) | tostring) + ";\n"
+' "$tmdb_response" > "$movies_list"

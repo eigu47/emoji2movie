@@ -9,31 +9,25 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
-import { Movie } from '@/lib/getMovieLists';
+import { MovieList } from '@/lib/types';
 import { useThrottle } from '@/lib/useThrottle';
 import Fuse, { FuseResult } from 'fuse.js';
-import { useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-export default function InputForm({ movieList }: { movieList: Movie[] }) {
+export default function InputForm() {
   const [input, setInput] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
-  const [results, setResults] = useState<FuseResult<Movie>[]>([]);
+  const [showAutocomplete, setShowAutocomplete] = useState(true);
+  const [results, setResults] = useState<FuseResult<MovieList>[]>([]);
+  const fuseRef = useRef<Fuse<MovieList>>(null);
 
-  const fuse = useMemo(() => {
-    return new Fuse(movieList, {
-      keys: ['title'],
-      threshold: 0.3,
-      includeScore: false,
-      ignoreDiacritics: true,
-      ignoreLocation: true,
-      minMatchCharLength: 2,
-      // sortFn: (a, b) => Number(a.item.voteCount) - Number(b.item.voteCount),
-    });
-  }, [movieList]);
+  useEffect(() => {
+    getFuse()
+      .then((f) => (fuseRef.current = f))
+      .catch(console.error);
+  }, []);
 
   const throttledSetResults = useThrottle((val: string) => {
-    if (val.length > 10 && results.length == 0) return;
-    setResults(fuse.search(val, { limit: 5 }));
+    setResults(fuseRef.current?.search(val.trim(), { limit: 5 }) ?? []);
   }, 100);
 
   return (
@@ -41,6 +35,7 @@ export default function InputForm({ movieList }: { movieList: Movie[] }) {
       <Command className="relative overflow-visible bg-transparent" loop>
         <Input
           placeholder="Enter your guess..."
+          autoFocus
           className="w-full border-gray-600 bg-gray-700 text-center text-lg text-white placeholder-gray-400"
           value={input}
           onChange={(e) => {
@@ -48,14 +43,14 @@ export default function InputForm({ movieList }: { movieList: Movie[] }) {
             setInput(val);
             throttledSetResults(val);
           }}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onFocus={() => setShowAutocomplete(true)}
+          onBlur={() => setShowAutocomplete(false)}
         />
-        {isFocused && input.length > 0 && (
+        {showAutocomplete && input.length > 0 && (
           <CommandList className="bg-popover absolute top-full mt-1 h-fit w-full rounded-md">
             {results.length == 0 ? (
               <CommandEmpty className="flex h-10 items-center justify-center p-0">
-                No results found
+                {fuseRef.current ? 'No results found' : 'Loading movies...'}
               </CommandEmpty>
             ) : (
               <CommandGroup>
@@ -72,4 +67,29 @@ export default function InputForm({ movieList }: { movieList: Movie[] }) {
       </Button>
     </form>
   );
+}
+
+let fusePromise: Promise<Fuse<MovieList>> | null = null;
+function getFuse() {
+  fusePromise ??= (async () => {
+    const [{ default: Fuse }, { MOVIE_LIST }] = await Promise.all([
+      import('fuse.js'),
+      import('@/constants/movie-list'),
+    ]);
+
+    return new Fuse(MOVIE_LIST, {
+      keys: ['title'],
+      threshold: 0.3,
+      includeScore: false,
+      ignoreDiacritics: true,
+      ignoreLocation: true,
+      minMatchCharLength: 2,
+      // sortFn: (a, b) => Number(a.item.voteCount) - Number(b.item.voteCount),
+    });
+  })().catch((err: unknown) => {
+    fusePromise = null;
+    throw err;
+  });
+
+  return fusePromise;
 }

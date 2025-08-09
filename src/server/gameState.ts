@@ -1,5 +1,5 @@
-import { getAllMovies } from '@/lib/getMovieLists';
-import { gameStateSchema } from '@/types/gameState';
+import { gameStateSchema } from '@/lib/schemas';
+import { getAllMovies } from '@/server/movieList';
 import { cookies } from 'next/headers';
 
 export async function getGameState() {

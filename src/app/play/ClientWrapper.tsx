@@ -2,7 +2,7 @@
 
 import { setGameAction } from '@/app/play/actions';
 import { getLocalCookie } from '@/lib/localCookies';
-import { GameState, gameStateSchema } from '@/types/gameState';
+import { GameState, gameStateSchema } from '@/lib/schemas';
 import { ReactNode, useEffect } from 'react';
 
 export function ClientWrapper({

@@ -1,7 +1,7 @@
 'use server';
 
-import { errorResponse, successResponse } from '@/lib/serverResponse';
-import { GameState, gameStateSchema } from '@/types/gameState';
+import { GameState, gameStateSchema } from '@/lib/schemas';
+import { errorResponse, successResponse } from '@/server/serverResponse';
 import { cookies } from 'next/headers';
 
 export async function setGameAction(gameState: GameState) {
