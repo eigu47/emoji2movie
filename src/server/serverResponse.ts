@@ -1,16 +1,10 @@
 export function successResponse<T = undefined>(data?: T) {
-  return {
-    ok: true as const,
-    data: data as T,
-  };
+  return { error: null, ...(data as T) };
 }
 
-export function errorResponse<T>(message: T, error?: unknown) {
-  console.error(message, ...(error ? [': ', error] : []));
-  return {
-    ok: false as const,
-    message,
-  };
+export function errorResponse<T>(error: T, errorInstance?: unknown) {
+  console.error(error, ...(errorInstance ? [': ', errorInstance] : []));
+  return { error };
 }
 
 export type ServerResponse<T = undefined, E = undefined> =

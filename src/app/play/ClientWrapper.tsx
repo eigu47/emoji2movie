@@ -19,8 +19,8 @@ export function ClientWrapper({
       if (JSON.stringify(gameState) !== gameCookie) throw new Error();
     } catch {
       void setGameAction(gameState).then((res) => {
-        if (!res.ok) {
-          alert(res.message);
+        if (res.error) {
+          alert(res.error);
         }
       });
     }
