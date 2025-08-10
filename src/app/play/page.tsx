@@ -10,7 +10,7 @@ export default async function Play() {
   const totalQuestions = 10;
 
   return (
-    <ClientWrapper gameState={gameState}>
+    <>
       <div className="mt-[10dvh] flex min-h-dvh flex-col items-center">
         <Card className="w-full max-w-lg border-gray-700 bg-gray-800">
           <CardHeader>
@@ -51,6 +51,8 @@ export default async function Play() {
           </CardContent>
         </Card>
       </div>
-    </ClientWrapper>
+
+      <ClientWrapper gameState={gameState} />
+    </>
   );
 }

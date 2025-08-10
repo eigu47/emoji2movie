@@ -30,7 +30,7 @@ export async function submitGuessAction(
       .parse(Object.fromEntries(form));
     const cookieStore = await cookies();
     console.log({ guess });
-    return successResponse({ guess });
+    return successResponse({ guess: 'correct!' });
   } catch (error) {
     return errorResponse('Failed to submit', error);
   }

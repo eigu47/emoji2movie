@@ -3,15 +3,9 @@
 import { setGameAction } from '@/app/play/actions';
 import { getLocalCookie } from '@/lib/localCookies';
 import { GameState, gameStateSchema } from '@/lib/schemas';
-import { ReactNode, useEffect } from 'react';
+import { useEffect } from 'react';
 
-export function ClientWrapper({
-  children,
-  gameState,
-}: {
-  children: ReactNode;
-  gameState: GameState;
-}) {
+export function ClientWrapper({ gameState }: { gameState: GameState }) {
   useEffect(() => {
     try {
       const gameCookie = getLocalCookie('game');
@@ -26,5 +20,5 @@ export function ClientWrapper({
     }
   }, []);
 
-  return <>{children}</>;
+  return null;
 }
