@@ -27,7 +27,10 @@ export default function InputForm() {
   }, []);
 
   const throttledSetResults = useThrottle((val: string) => {
-    setResults(fuseRef.current?.search(val.trim(), { limit: 5 }) ?? []);
+    val = val.trim();
+
+    if (val.length > 10 && results.length == 0) return;
+    setResults(fuseRef.current?.search(val, { limit: 5 }) ?? []);
   }, 100);
 
   return (
@@ -78,8 +81,8 @@ function getFuse() {
     ]);
 
     return new Fuse(MOVIE_LIST, {
-      keys: ['title'],
-      threshold: 0.3,
+      keys: ['title', 'year'],
+      threshold: 0.2,
       includeScore: false,
       ignoreDiacritics: true,
       ignoreLocation: true,
