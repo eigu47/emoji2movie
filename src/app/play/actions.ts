@@ -1,9 +1,9 @@
 'use server';
 
-import { GameState, gameStateSchema } from '@/lib/schemas';
+import { type GameState, gameStateSchema } from '@/lib/schemas';
 import {
   errorResponse,
-  ServerResponse,
+  type ServerResponse,
   successResponse,
 } from '@/server/serverResponse';
 import { cookies } from 'next/headers';

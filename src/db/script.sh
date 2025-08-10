@@ -37,19 +37,23 @@ for i in {1..500}; do
 done
 printf "]}\n" >> "$tmdb_response"
 
+Filter out some movies
+jq -c '
+  .results
+  | add
+  | map(select(
+    values
+    | all(
+      . != null and . != "" and . != []
+    )
+  ))
+' "$tmdb_response" > tmp && mv tmp "$tmdb_response"
+
 # Generate movies seed
 jq -r '
-  "INSERT INTO movie ("+ (.results[0][0] | keys | join(", ")) + ") VALUES\n" +
+  "INSERT INTO movie ("+ (.[0] | keys | join(", ")) + ") VALUES\n" +
   (
-    .results
-    | add
-    | map(select(
-      values
-      | all(
-        . != null and . != "" and . != []
-      )
-    ))
-    | map(
+    map(
       "(" + (
         map(
           tostring
@@ -65,15 +69,7 @@ jq -r '
 jq -r '
   "INSERT INTO movie_genre (movie_id, genre_id) VALUES\n" +
   (
-    .results
-    | add
-    | map(select(
-      values
-      | all(
-        . != null and . != "" and . != []
-      )
-    ))
-    | map(.id as $id
+    map(.id as $id
       | .genre_ids
       | map("(\($id), \(.))")
       | join(",\n")
@@ -81,18 +77,12 @@ jq -r '
   ) + ";"
 ' "$tmdb_response" > "$movie_genre_seed"
 
-# Generate movies list for autocomplete
+# # Generate movies list for autocomplete
 jq -r '
   "export const MOVIE_LIST: { id: number, title: string, vote: number, year: number }[] =\n" +
   (
-    .results
-    | add
-    | map(select(
-      values
-      | all(
-        . != null and . != "" and . != []
-      )
-    ))
+    sort_by(-.vote_count)
+    | .[0:5000]
     | map({
       id,
       title,

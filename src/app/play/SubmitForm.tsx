@@ -1,6 +1,6 @@
 'use client';
 
-import { submitGuessAction } from '@/app/play/actions';
+import { type submitGuessAction } from '@/app/play/actions';
 import {
   Command,
   CommandEmpty,
@@ -14,29 +14,22 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { MovieList } from '@/lib/types';
+import { type ActionState, type MovieList } from '@/lib/types';
 import { useThrottle } from '@/lib/useThrottle';
-import { successResponse } from '@/server/serverResponse';
-import Fuse, { FuseResult } from 'fuse.js';
-import {
-  startTransition,
-  useActionState,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import type Fuse from 'fuse.js';
+import { type FuseResult } from 'fuse.js';
+import { startTransition, useEffect, useRef, useState } from 'react';
 
-export default function InputForm() {
+export default function SubmitForm({
+  actionState: [state, action, isPending],
+}: {
+  actionState: ActionState<typeof submitGuessAction>;
+}) {
   const [input, setInput] = useState('');
   const [open, setOpen] = useState(true);
   const fuseRef = useRef<Fuse<MovieList>>(null);
   const resultsRef = useRef<FuseResult<MovieList>[]>([]);
   const activeItemRef = useRef<string>(undefined);
-
-  const [state, action, isPending] = useActionState(
-    submitGuessAction,
-    successResponse({ guess: '' })
-  );
 
   const throttledSetResults = useThrottle((val: string) => {
     val = val.trim();
