@@ -2,11 +2,10 @@
 set -e
 set -o pipefail
 
-tmdb_response="./src/db/tmdb.json"
-genres_seed="./src/db/seeds/genres.sql"
-movies_seed="./src/db/seeds/movies.sql"
-movie_genre_seed="./src/db/seeds/movie_genre.sql"
-movies_list="./src/constants/movie-list.ts"
+tmdb_response="./src/db/local/tmdb.json"
+genres_seed="./src/db/local/seeds/genres.sql"
+movies_seed="./src/db/local/seeds/movies.sql"
+movie_genre_seed="./src/db/local/seeds/movie_genre.sql"
 
 # Scrape TMDB genres
 curl --fail -s --request GET \
@@ -37,7 +36,7 @@ for i in {1..500}; do
 done
 printf "]}\n" >> "$tmdb_response"
 
-Filter out some movies
+# Filter out some movies
 jq -c '
   .results
   | add
@@ -77,16 +76,17 @@ jq -r '
   ) + ";"
 ' "$tmdb_response" > "$movie_genre_seed"
 
-# # Generate movies list for autocomplete
-jq -r '
-  "export const MOVIE_LIST: { id: number, title: string, vote: number, year: number }[] =\n" +
-  (
-    sort_by(-.vote_count)
-    | .[0:5000]
-    | map({
-      id,
-      title,
-      vote: .vote_count,
-      year: (.release_date | split("-")[0] | tonumber)
-    }) | tostring) + ";\n"
-' "$tmdb_response" > "$movies_list"
+# Generate movies list for autocomplete
+# movies_list="./src/constants/movie-list.ts"
+# jq -r '
+#   "export const MOVIE_LIST: { id: number, title: string, vote: number, year: number }[] =\n" +
+#   (
+#     sort_by(-.vote_count)
+#     | .[0:5000]
+#     | map({
+#       id,
+#       title,
+#       vote: .vote_count,
+#       year: (.release_date | split("-")[0] | tonumber)
+#     }) | tostring) + ";\n"
+# ' "$tmdb_response" > "$movies_list"

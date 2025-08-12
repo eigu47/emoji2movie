@@ -1,5 +1,5 @@
 import PlayCard from '@/app/play/PlayCard';
-import db from '@/db';
+import db from '@/db/local';
 import { getGameState } from '@/server/gameState';
 
 export default async function Play() {

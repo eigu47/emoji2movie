@@ -1,5 +1,5 @@
 import { type GameState, gameStateSchema } from '@/lib/schemas';
-import { getAllMovies } from '@/server/movieList';
+import { getAllMovies } from '@/server/getMovies';
 import { cookies } from 'next/headers';
 
 export async function getGameState(): Promise<GameState> {

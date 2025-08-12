@@ -1,10 +1,10 @@
-import db from '@/db';
+import db from '@/db/local';
 import fs from 'fs';
 
 const SEEDS = {
-  genres: './src/db/seeds/genres.sql',
-  movies: './src/db/seeds/movies.sql',
-  movieGenre: './src/db/seeds/movie_genre.sql',
+  genres: './src/db/local/seeds/genres.sql',
+  movies: './src/db/local/seeds/movies.sql',
+  movieGenre: './src/db/local/seeds/movie_genre.sql',
 };
 
 async function runSeed(seed: keyof typeof SEEDS) {

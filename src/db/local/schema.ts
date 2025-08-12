@@ -27,7 +27,7 @@ export const movie = sqliteTable(
     voteAverage: real().notNull(),
     voteCount: integer().notNull(),
   },
-  (m) => [index('title_idx').on(m.title)]
+  (m) => [index('vote_count_idx').on(m.voteCount)]
 );
 
 export const genre = sqliteTable(
