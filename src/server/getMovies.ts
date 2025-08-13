@@ -17,6 +17,22 @@ export function getMovieList(ids: number[] | undefined) {
   });
 }
 
+export function getMovie(id: number) {
+  return localDb.query.movie.findFirst({
+    columns: {
+      id: true,
+      title: true,
+    },
+    extras: ({ releaseDate, voteCount }, { sql }) => ({
+      year: sql<number>`CAST(substr(${releaseDate}, 1, 4) AS INTEGER)`.as(
+        'year'
+      ),
+      vote: sql<number>`${voteCount}`.as('vote'),
+    }),
+    where: (movie, { eq }) => eq(movie.id, id),
+  });
+}
+
 export const getAllMovies = unstable_cache(() => getMovieList(undefined));
 
 export const getTopMovies = unstable_cache((limit: number = 5000) =>
