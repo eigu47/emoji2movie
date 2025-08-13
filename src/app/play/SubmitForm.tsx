@@ -1,6 +1,9 @@
 'use client';
 
-import { type submitGuessAction } from '@/app/play/actions';
+import {
+  getAutocompleteMovies,
+  type submitGuessAction,
+} from '@/app/play/actions';
 import {
   Command,
   CommandEmpty,
@@ -26,25 +29,28 @@ export default function SubmitForm({
   actionState: ActionState<typeof submitGuessAction>;
 }) {
   const [input, setInput] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(true);
+  const [results, setResults] = useState<FuseResult<MovieList>[]>([]);
   const fuseRef = useRef<Fuse<MovieList>>(null);
-  const resultsRef = useRef<FuseResult<MovieList>[]>([]);
   const activeItemRef = useRef<string>(undefined);
 
   const throttledSetResults = useThrottle((val: string) => {
     val = val.trim();
-    if (val.length > 10 && resultsRef.current.length == 0) return;
+    if (val.length > 10 && results.length == 0) return;
 
-    const results = fuseRef.current?.search(val, { limit: 5 }) ?? [];
-    resultsRef.current = results;
-    activeItemRef.current = results[0]?.item.id.toString();
+    const found = fuseRef.current?.search(val, { limit: 5 }) ?? [];
+    activeItemRef.current = found[0]?.item.id.toString();
+    setResults(found);
   }, 100);
 
   useEffect(() => {
+    if (fuseRef.current != null) return;
+
     getFuse()
       .then((f) => {
         fuseRef.current = f;
-        throttledSetResults(input);
+        throttledSetResults(inputRef.current?.value ?? '');
       })
       .catch(console.error);
   }, []);
@@ -59,6 +65,7 @@ export default function SubmitForm({
         loop
       >
         <Input
+          ref={inputRef}
           placeholder="Enter your guess..."
           autoFocus
           className="w-full border-gray-600 bg-gray-700 text-center text-lg text-white placeholder-gray-400"
@@ -81,13 +88,13 @@ export default function SubmitForm({
         >
           {input.length > 0 && (
             <CommandList>
-              {resultsRef.current.length == 0 ? (
+              {results.length == 0 ? (
                 <CommandEmpty className="flex h-10 items-center justify-center p-0">
                   {fuseRef.current ? 'No results found' : 'Loading movies...'}
                 </CommandEmpty>
               ) : (
                 <CommandGroup>
-                  {resultsRef.current.map(({ item: { id, title, year } }) => (
+                  {results.map(({ item: { id, title, year } }) => (
                     <CommandItem
                       key={id}
                       value={id.toString()}
@@ -114,12 +121,14 @@ export default function SubmitForm({
 let fusePromise: Promise<Fuse<MovieList>> | null = null;
 function getFuse() {
   fusePromise ??= (async () => {
-    const [{ default: Fuse }, { MOVIE_LIST }] = await Promise.all([
+    const [{ default: Fuse }, { error, data: movies }] = await Promise.all([
       import('fuse.js'),
-      import('@/constants/movie-list'),
+      getAutocompleteMovies(),
     ]);
 
-    return new Fuse(MOVIE_LIST, {
+    if (error != null) throw new Error(error);
+
+    return new Fuse(movies, {
       keys: ['title', 'year'],
       threshold: 0.2,
       includeScore: false,

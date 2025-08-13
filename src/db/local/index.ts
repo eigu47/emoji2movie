@@ -1,16 +1,14 @@
-import env from '@/lib/env';
-import { createClient } from '@libsql/client';
-import { drizzle } from 'drizzle-orm/libsql';
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import path from 'path';
 import * as schema from '@/db/local/schema';
 
-const client = createClient({
-  url: env.TURSO_CONNECTION_URL,
-  authToken: env.TURSO_AUTH_TOKEN,
-});
+const client = new Database(path.join(process.cwd(), 'local-db.db'));
 
-const db = drizzle(client, {
+const localDb = drizzle({
+  client,
   schema,
   casing: 'snake_case',
 });
 
-export default db;
+export default localDb;

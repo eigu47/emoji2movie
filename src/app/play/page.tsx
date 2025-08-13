@@ -1,10 +1,10 @@
 import PlayCard from '@/app/play/PlayCard';
-import db from '@/db/local';
+import localDb from '@/db/local';
 import { getGameState } from '@/server/gameState';
 
 export default async function Play() {
   const gameState = await getGameState();
-  const movie = await db.query.movie.findFirst({
+  const movie = await localDb.query.movie.findFirst({
     columns: {
       title: true,
     },

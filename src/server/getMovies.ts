@@ -1,11 +1,8 @@
-import { MOVIE_LIST } from '@/constants/movie-list';
-import db from '@/db/local';
+import localDb from '@/db/local';
 import { unstable_cache } from 'next/cache';
 
-export const getAllMovies = unstable_cache(() => getMovieList(undefined));
-
 export function getMovieList(ids: number[] | undefined) {
-  return db.query.movie.findMany({
+  return localDb.query.movie.findMany({
     columns: {
       id: true,
       title: true,
@@ -20,27 +17,42 @@ export function getMovieList(ids: number[] | undefined) {
   });
 }
 
-export async function getRandomMovie() {
-  let randomMovie;
-  try {
-    randomMovie = await db.query.movie.findFirst({
-      columns: {
-        id: true,
-        title: true,
-      },
-      extras: ({ releaseDate, voteCount }, { sql }) => ({
-        year: sql<number>`CAST(substr(${releaseDate}, 1, 4) AS INTEGER)`.as(
-          'year'
-        ),
-        vote: sql<number>`${voteCount}`.as('vote'),
-      }),
-      orderBy: (movie, { desc }) => desc(movie.voteCount),
-      offset: Math.floor(Math.random() * 1000),
-    });
+export const getAllMovies = unstable_cache(() => getMovieList(undefined));
 
-    randomMovie ??= MOVIE_LIST[Math.floor(Math.random() * MOVIE_LIST.length)]!;
-  } catch {
-    randomMovie = MOVIE_LIST[Math.floor(Math.random() * MOVIE_LIST.length)]!;
-  }
+export const getTopMovies = unstable_cache((limit: number = 5000) =>
+  localDb.query.movie.findMany({
+    columns: {
+      id: true,
+      title: true,
+    },
+    extras: ({ releaseDate, voteCount }, { sql }) => ({
+      year: sql<number>`CAST(substr(${releaseDate}, 1, 4) AS INTEGER)`.as(
+        'year'
+      ),
+      vote: sql<number>`${voteCount}`.as('vote'),
+    }),
+    orderBy: ({ voteCount }, { desc }) => desc(voteCount),
+    limit,
+  })
+);
+
+export async function getRandomMovie(top = 1000) {
+  const randomMovie = await localDb.query.movie.findFirst({
+    columns: {
+      id: true,
+      title: true,
+    },
+    extras: ({ releaseDate, voteCount }, { sql }) => ({
+      year: sql<number>`CAST(substr(${releaseDate}, 1, 4) AS INTEGER)`.as(
+        'year'
+      ),
+      vote: sql<number>`${voteCount}`.as('vote'),
+    }),
+    orderBy: (movie, { desc }) => desc(movie.voteCount),
+    offset: Math.floor(Math.random() * top),
+  });
+
+  if (!randomMovie) throw new Error('No random movie found');
+
   return randomMovie;
 }

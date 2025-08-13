@@ -1,6 +1,7 @@
 'use server';
 
 import { type GameState, gameStateSchema } from '@/lib/schemas';
+import { getTopMovies } from '@/server/getMovies';
 import {
   errorResponse,
   type ServerResponse,
@@ -20,8 +21,16 @@ export async function setGameAction(gameState: GameState) {
   }
 }
 
+export async function getAutocompleteMovies() {
+  try {
+    return successResponse(await getTopMovies(5000));
+  } catch (error: unknown) {
+    return errorResponse('Failed to load movies', error);
+  }
+}
+
 export async function submitGuessAction(
-  prev: ServerResponse<{ guess: string }, string>,
+  prev: ServerResponse<{ guess: string }>,
   form: FormData
 ) {
   try {

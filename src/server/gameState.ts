@@ -1,5 +1,5 @@
 import { type GameState, gameStateSchema } from '@/lib/schemas';
-import { getAllMovies } from '@/server/getMovies';
+import { getRandomMovie } from '@/server/getMovies';
 import { cookies } from 'next/headers';
 
 export async function getGameState(): Promise<GameState> {
@@ -7,11 +7,9 @@ export async function getGameState(): Promise<GameState> {
     const gameCookie = (await cookies()).get('game');
     return gameStateSchema.parse(JSON.parse(gameCookie?.value ?? '{}'));
   } catch {
-    const moviesList = await getAllMovies();
-    const movieId =
-      moviesList[Math.floor(Math.random() * moviesList.length)]!.id;
+    const movie = await getRandomMovie(1000);
     return {
-      movieIds: [movieId],
+      movieIds: [movie.id],
     };
   }
 }
