@@ -1,4 +1,5 @@
 import localDb from '@/db/local';
+import { sql } from 'drizzle-orm';
 import { unstable_cache } from 'next/cache';
 
 export function getMovieList(ids: number[] | undefined) {
@@ -17,8 +18,8 @@ export function getMovieList(ids: number[] | undefined) {
   });
 }
 
-export function getMovie(id: number) {
-  return localDb.query.movie.findFirst({
+export const getMovieById = localDb.query.movie
+  .findFirst({
     columns: {
       id: true,
       title: true,
@@ -29,14 +30,12 @@ export function getMovie(id: number) {
       ),
       vote: sql<number>`${voteCount}`.as('vote'),
     }),
-    where: (movie, { eq }) => eq(movie.id, id),
-  });
-}
+    where: ({ id }, { eq }) => eq(id, sql.placeholder('id')),
+  })
+  .prepare();
 
-export const getAllMovies = unstable_cache(() => getMovieList(undefined));
-
-export const getTopMovies = unstable_cache((limit: number = 5000) =>
-  localDb.query.movie.findMany({
+const getMoviesLimit = localDb.query.movie
+  .findMany({
     columns: {
       id: true,
       title: true,
@@ -48,12 +47,16 @@ export const getTopMovies = unstable_cache((limit: number = 5000) =>
       vote: sql<number>`${voteCount}`.as('vote'),
     }),
     orderBy: ({ voteCount }, { desc }) => desc(voteCount),
-    limit,
+    limit: sql.placeholder('limit'),
   })
+  .prepare();
+
+export const getTopMovies = unstable_cache((limit = 5000) =>
+  getMoviesLimit.execute({ limit })
 );
 
-export async function getRandomMovie(top = 1000) {
-  const randomMovie = await localDb.query.movie.findFirst({
+const getMovieOffset = localDb.query.movie
+  .findFirst({
     columns: {
       id: true,
       title: true,
@@ -65,6 +68,12 @@ export async function getRandomMovie(top = 1000) {
       vote: sql<number>`${voteCount}`.as('vote'),
     }),
     orderBy: (movie, { desc }) => desc(movie.voteCount),
+    offset: sql.placeholder('offset'),
+  })
+  .prepare();
+
+export async function getRandomMovie(top = 1000) {
+  const randomMovie = await getMovieOffset.execute({
     offset: Math.floor(Math.random() * top),
   });
 

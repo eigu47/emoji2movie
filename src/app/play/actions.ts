@@ -1,6 +1,7 @@
 'use server';
 
 import { type GameState, gameStateSchema } from '@/lib/schemas';
+import { getGameState } from '@/server/gameState';
 import { getTopMovies } from '@/server/getMovies';
 import {
   errorResponse,
@@ -35,11 +36,16 @@ export async function submitGuessAction(
 ) {
   try {
     const { guess } = z
-      .object({ guess: z.string() })
+      .object({ guess: z.coerce.number() })
       .parse(Object.fromEntries(form));
-    const cookieStore = await cookies();
-    console.log({ guess });
-    return successResponse({ guess: 'correct!' });
+
+    const gameState = await getGameState();
+
+    if (gameState.movies.at(-1)!.id == guess) {
+      return successResponse({ guess: 'correct!' });
+    }
+
+    return successResponse({ guess: 'incorrect!' });
   } catch (error) {
     return errorResponse('Failed to submit', error);
   }

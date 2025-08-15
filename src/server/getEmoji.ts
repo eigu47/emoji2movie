@@ -1,23 +1,28 @@
 import cloudDb from '@/db/cloud';
 import { emoji } from '@/db/cloud/schema';
-import { getMovie } from '@/server/getMovies';
+import { getMovieById } from '@/server/getMovies';
 import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
+import { sql } from 'drizzle-orm';
 import z from 'zod';
+
+const getEmojiById = cloudDb.query.emoji
+  .findFirst({
+    columns: {
+      id: true,
+      emoji: true,
+    },
+    where: ({ id }, { eq }) => eq(id, sql.placeholder('id')),
+  })
+  .prepare();
 
 export async function getEmoji(id: number) {
   try {
-    const cachedEmoji = await cloudDb.query.emoji.findFirst({
-      columns: {
-        id: true,
-        emoji: true,
-      },
-      where: (emoji, { eq }) => eq(emoji.id, id),
-    });
+    const cachedEmoji = await getEmojiById.execute({ id });
 
     if (cachedEmoji) return cachedEmoji;
 
-    const movie = await getMovie(id);
+    const movie = await getMovieById.execute({ id });
     if (!movie) throw new Error(`Movie not found in db ${id}`);
 
     const { text } = await generateText({

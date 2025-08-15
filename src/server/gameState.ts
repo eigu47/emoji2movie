@@ -7,9 +7,7 @@ export async function getGameState(): Promise<GameState> {
     const gameCookie = (await cookies()).get('game');
     return gameStateSchema.parse(JSON.parse(gameCookie?.value ?? '{}'));
   } catch {
-    const movie = await getRandomMovie(1000);
-    return {
-      movieIds: [movie.id],
-    };
+    const { id, title } = await getRandomMovie(1000);
+    return { movies: [{ id, title }] };
   }
 }

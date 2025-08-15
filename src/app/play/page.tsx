@@ -17,7 +17,7 @@ export default async function Play() {
               <Skeleton className="h-27 rounded-lg bg-gray-700 shadow-sm" />
             }
           >
-            <EmojiLoader movieId={gameState.movieIds.at(-1)!} />
+            <EmojiLoader movieId={gameState.movies.at(-1)!.id} />
           </Suspense>
         }
       />

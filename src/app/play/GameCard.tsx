@@ -21,8 +21,10 @@ export default function GameCard({
     successResponse({ guess: '' })
   );
 
-  const { movieIds } = gameState;
+  const { movies } = gameState;
   const totalQuestions = 10;
+
+  console.log(actionState[0]);
 
   useEffect(() => {
     try {
@@ -49,12 +51,12 @@ export default function GameCard({
             variant="secondary"
             className="bg-gray-700 px-3 py-1 text-lg text-gray-200"
           >
-            {movieIds.length - 1}/{totalQuestions}
+            {movies.length - 1}/{totalQuestions}
           </Badge>
         </div>
         <div className="flex justify-between text-sm text-gray-400">
           <span>
-            Question {movieIds.length} of {totalQuestions}
+            Question {movies.length} of {totalQuestions}
           </span>
           {/* <span>
           {Math.round(((movieIds.length - 1) / totalQuestions) * 100)}%
@@ -65,7 +67,7 @@ export default function GameCard({
           <div
             className="h-2 rounded-full bg-purple-600 transition-all duration-300"
             style={{
-              width: `${((movieIds.length - 1) / totalQuestions) * 100}%`,
+              width: `${((movies.length - 1) / totalQuestions) * 100}%`,
             }}
           />
         </div>
