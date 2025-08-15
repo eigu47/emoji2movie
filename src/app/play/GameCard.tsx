@@ -9,7 +9,13 @@ import { gameStateSchema, type GameState } from '@/lib/schemas';
 import { successResponse } from '@/server/serverResponse';
 import { useActionState, useEffect } from 'react';
 
-export default function PlayCard({ gameState }: { gameState: GameState }) {
+export default function GameCard({
+  gameState,
+  emojiDisplay,
+}: {
+  gameState: GameState;
+  emojiDisplay: React.ReactNode;
+}) {
   const actionState = useActionState(
     submitGuessAction,
     successResponse({ guess: '' })
@@ -65,9 +71,7 @@ export default function PlayCard({ gameState }: { gameState: GameState }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <p className="rounded-lg bg-gray-700 p-6 text-center text-6xl shadow-sm">
-          🌸
-        </p>
+        {emojiDisplay}
         <SubmitForm actionState={actionState} />
       </CardContent>
     </Card>
