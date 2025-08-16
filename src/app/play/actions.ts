@@ -1,13 +1,15 @@
 'use server';
 
-import { type GameState, gameStateSchema } from '@/lib/schemas';
-import { getGameState } from '@/server/gameState';
-import { getTopMovies } from '@/server/getMovies';
+import { type GameState, gameStateSchema } from '@/lib/validation';
+import { getRandomEmoji } from '@/server/getEmoji';
+import { getGameState, updateGameState } from '@/server/getGameState';
+import { getMovieById, getTopMovies } from '@/server/getMovies';
 import {
   errorResponse,
-  type ServerResponse,
+  type SuccessResponse,
   successResponse,
 } from '@/server/serverResponse';
+import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import z from 'zod';
 
@@ -18,6 +20,7 @@ export async function setGameAction(gameState: GameState) {
     cookieStore.set('game', JSON.stringify(parsedGameState));
     return successResponse(parsedGameState);
   } catch {
+    revalidatePath('/play');
     return errorResponse('Failed to set game state');
   }
 }
@@ -30,23 +33,63 @@ export async function getAutocompleteMovies() {
   }
 }
 
+export type GuessResponse = {
+  guessed: number[];
+  hint: number[];
+  emoji?: string;
+  answer?: {
+    title: string;
+    year: number;
+    posterPath: string;
+  };
+};
+
 export async function submitGuessAction(
-  prev: ServerResponse<{ guess: string }>,
+  { data }: SuccessResponse<GuessResponse>,
   form: FormData
-) {
+): Promise<SuccessResponse<GuessResponse>> {
   try {
     const { guess } = z
       .object({ guess: z.coerce.number() })
       .parse(Object.fromEntries(form));
 
-    const gameState = await getGameState();
+    const { movieId } = await getGameState();
 
-    if (gameState.movies.at(-1)!.id == guess) {
-      return successResponse({ guess: 'correct!' });
+    // Correct guess
+    if (movieId == guess) {
+      const [{ title, year, posterPath }, { emoji, id }] = await Promise.all([
+        getMovieById(guess),
+        getRandomEmoji(),
+      ]);
+      await updateGameState({ movieId: id, correct: true });
+
+      return successResponse({
+        emoji,
+        guessed: [],
+        hint: [],
+        answer: {
+          title,
+          year,
+          posterPath,
+        },
+      });
     }
 
-    return successResponse({ guess: 'incorrect!' });
+    // Incorrect guess
+    return successResponse({
+      ...data,
+      guessed: [...data.guessed, guess],
+    });
   } catch (error) {
-    return errorResponse('Failed to submit', error);
+    console.error('Failed to submit guess: ', error);
+
+    const { emoji, id } = await getRandomEmoji();
+    await updateGameState({ movieId: id, correct: false });
+
+    return successResponse({
+      emoji,
+      guessed: [],
+      hint: [],
+    });
   }
 }

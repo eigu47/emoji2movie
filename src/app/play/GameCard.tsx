@@ -1,13 +1,17 @@
 'use client';
 
 import { setGameAction, submitGuessAction } from '@/app/play/actions';
-import SubmitForm from '@/app/play/SubmitForm';
+import GameDisplay from '@/app/play/GameDisplay';
+import GameForm from '@/app/play/GameForm';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { IMG_BASE_URL } from '@/lib/constants';
 import { getLocalCookie } from '@/lib/localCookies';
-import { gameStateSchema, type GameState } from '@/lib/schemas';
+import { gameStateSchema, type GameState } from '@/lib/validation';
 import { successResponse } from '@/server/serverResponse';
-import { useActionState, useEffect } from 'react';
+import Image from 'next/image';
+import { useActionState, useEffect, useState } from 'react';
 
 export default function GameCard({
   gameState,
@@ -18,13 +22,23 @@ export default function GameCard({
 }) {
   const actionState = useActionState(
     submitGuessAction,
-    successResponse({ guess: '' })
+    successResponse({ guessed: [], hint: [] })
   );
+  const [
+    {
+      data: { emoji, guessed, hint, answer },
+    },
+    action,
+    isPending,
+  ] = actionState;
+  const showPosterState = useState(false);
+  const [showPoster, setShowPoster] = showPosterState;
 
-  const { movies } = gameState;
+  useEffect(() => {
+    if (answer?.posterPath) setShowPoster(true);
+  }, [answer?.posterPath]);
+
   const totalQuestions = 10;
-
-  console.log(actionState[0]);
 
   useEffect(() => {
     try {
@@ -51,12 +65,12 @@ export default function GameCard({
             variant="secondary"
             className="bg-gray-700 px-3 py-1 text-lg text-gray-200"
           >
-            {movies.length - 1}/{totalQuestions}
+            {gameState.streak - 1}/{totalQuestions}
           </Badge>
         </div>
         <div className="flex justify-between text-sm text-gray-400">
           <span>
-            Question {movies.length} of {totalQuestions}
+            Question {gameState.streak} of {totalQuestions}
           </span>
           {/* <span>
           {Math.round(((movieIds.length - 1) / totalQuestions) * 100)}%
@@ -67,14 +81,35 @@ export default function GameCard({
           <div
             className="h-2 rounded-full bg-purple-600 transition-all duration-300"
             style={{
-              width: `${((movies.length - 1) / totalQuestions) * 100}%`,
+              width: `${((gameState.streak - 1) / totalQuestions) * 100}%`,
             }}
           />
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {emojiDisplay}
-        <SubmitForm actionState={actionState} />
+        {!emoji ? (
+          emojiDisplay
+        ) : showPoster && answer ? (
+          <GameDisplay>
+            <Image
+              src={IMG_BASE_URL + answer.posterPath}
+              alt={`${answer.title} (${answer.year}) movie Poster`}
+              className="mx-auto rounded-lg object-cover"
+              width={200}
+              height={300}
+            />
+          </GameDisplay>
+        ) : (
+          <GameDisplay>{emoji}</GameDisplay>
+        )}
+
+        {showPoster && answer ? (
+          <Button className="w-full" onClick={() => setShowPoster(false)}>
+            Next
+          </Button>
+        ) : (
+          <GameForm actionState={actionState} />
+        )}
       </CardContent>
     </Card>
   );

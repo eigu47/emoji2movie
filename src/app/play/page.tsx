@@ -1,11 +1,12 @@
+import GameDisplay from '@/app/play/GameDisplay';
 import GameCard from '@/app/play/GameCard';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getGameState } from '@/server/gameState';
 import { getEmoji } from '@/server/getEmoji';
+import { getOrCreateGameState } from '@/server/getGameState';
 import { Suspense } from 'react';
 
 export default async function Play() {
-  const gameState = await getGameState();
+  const gameState = await getOrCreateGameState();
 
   return (
     <div className="mt-[10dvh] flex min-h-dvh flex-col items-center">
@@ -17,7 +18,7 @@ export default async function Play() {
               <Skeleton className="h-27 rounded-lg bg-gray-700 shadow-sm" />
             }
           >
-            <EmojiLoader movieId={gameState.movies.at(-1)!.id} />
+            <EmojiLoader movieId={gameState.movieId} />
           </Suspense>
         }
       />
@@ -25,16 +26,8 @@ export default async function Play() {
   );
 }
 
-export function EmojiDisplay({ emoji }: { emoji: string }) {
-  return (
-    <p className="rounded-lg bg-gray-700 p-6 text-center text-6xl shadow-sm">
-      {emoji}
-    </p>
-  );
-}
-
 export async function EmojiLoader({ movieId }: { movieId: number }) {
-  const emoji = await getEmoji(movieId);
+  const { emoji } = await getEmoji(movieId);
 
-  return <EmojiDisplay emoji={emoji.emoji} />;
+  return <GameDisplay>{emoji}</GameDisplay>;
 }

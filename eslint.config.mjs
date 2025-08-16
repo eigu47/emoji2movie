@@ -40,6 +40,7 @@ const eslintConfig = [
         { fixStyle: 'inline-type-imports' },
       ],
       '@typescript-eslint/no-inferrable-types': 'warn',
+      'no-console': ['warn', { allow: ['error', 'warn'] }],
     },
   },
   {

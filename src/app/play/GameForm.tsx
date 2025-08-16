@@ -17,22 +17,29 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { type ActionState, type MovieList } from '@/lib/types';
+import { type ActionState } from '@/lib/types';
 import { useThrottle } from '@/lib/useThrottle';
+import { type Movie } from '@/server/getMovies';
 import type Fuse from 'fuse.js';
 import { type FuseResult } from 'fuse.js';
 import { startTransition, useEffect, useRef, useState } from 'react';
 
-export default function SubmitForm({
-  actionState: [state, action, isPending],
+export default function GameForm({
+  actionState: [
+    {
+      data: { guessed },
+    },
+    action,
+    isPending,
+  ],
 }: {
   actionState: ActionState<typeof submitGuessAction>;
 }) {
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(true);
-  const [results, setResults] = useState<FuseResult<MovieList>[]>([]);
-  const fuseRef = useRef<Fuse<MovieList>>(null);
+  const [results, setResults] = useState<FuseResult<Movie>[]>([]);
+  const fuseRef = useRef<Fuse<Movie>>(null);
   const activeItemRef = useRef<string>(undefined);
 
   const throttledSetResults = useThrottle((val: string) => {
@@ -40,9 +47,25 @@ export default function SubmitForm({
     if (val.length > 10 && results.length == 0) return;
 
     const found = fuseRef.current?.search(val, { limit: 5 }) ?? [];
-    activeItemRef.current = found[0]?.item.id.toString();
+    activeItemRef.current = found
+      .find(({ item: { id } }) => !guessed.includes(id))
+      ?.item.id.toString();
     setResults(found);
   }, 100);
+
+  function openAutocomplete() {
+    activeItemRef.current = results
+      .find(({ item: { id } }) => !guessed.includes(id))
+      ?.item.id.toString();
+    setOpen(true);
+  }
+
+  useEffect(() => {
+    if (!isPending) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [isPending]);
 
   useEffect(() => {
     if (fuseRef.current != null) return;
@@ -59,6 +82,7 @@ export default function SubmitForm({
     <Popover open={open} onOpenChange={setOpen}>
       <Command
         value={activeItemRef.current}
+        className="bg-transparent"
         onValueChange={(val) => {
           activeItemRef.current = val;
         }}
@@ -68,10 +92,11 @@ export default function SubmitForm({
           ref={inputRef}
           placeholder="Enter your guess..."
           autoFocus
-          className="w-full border-gray-600 bg-gray-700 text-center text-lg text-white placeholder-gray-400"
+          className="w-full text-center text-lg"
+          disabled={isPending}
           value={input}
-          onFocus={() => setOpen(true)}
-          onClick={() => setOpen(true)}
+          onFocus={openAutocomplete}
+          onClick={openAutocomplete}
           onChange={(e) => {
             const val = e.currentTarget.value;
             setInput(val);
@@ -98,6 +123,7 @@ export default function SubmitForm({
                     <CommandItem
                       key={id}
                       value={id.toString()}
+                      disabled={isPending || guessed.includes(id)}
                       onSelect={() => {
                         setInput(title);
                         setOpen(false);
@@ -118,7 +144,7 @@ export default function SubmitForm({
   );
 }
 
-let fusePromise: Promise<Fuse<MovieList>> | null = null;
+let fusePromise: Promise<Fuse<Movie>> | null = null;
 function getFuse() {
   fusePromise ??= (async () => {
     const [{ default: Fuse }, { error, data: movies }] = await Promise.all([

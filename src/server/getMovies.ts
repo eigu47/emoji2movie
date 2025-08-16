@@ -2,6 +2,8 @@ import localDb from '@/db/local';
 import { sql } from 'drizzle-orm';
 import { unstable_cache } from 'next/cache';
 
+export type Movie = Awaited<ReturnType<typeof getRandomMovie>>;
+
 export function getMovieList(ids: number[] | undefined) {
   return localDb.query.movie.findMany({
     columns: {
@@ -18,11 +20,12 @@ export function getMovieList(ids: number[] | undefined) {
   });
 }
 
-export const getMovieById = localDb.query.movie
+const getMovieByIdPrepared = localDb.query.movie
   .findFirst({
     columns: {
       id: true,
       title: true,
+      posterPath: true,
     },
     extras: ({ releaseDate, voteCount }, { sql }) => ({
       year: sql<number>`CAST(substr(${releaseDate}, 1, 4) AS INTEGER)`.as(
@@ -34,7 +37,14 @@ export const getMovieById = localDb.query.movie
   })
   .prepare();
 
-const getMoviesLimit = localDb.query.movie
+export async function getMovieById(id: number) {
+  const movie = await getMovieByIdPrepared.execute({ id });
+  if (!movie) throw new Error(`Movie not found in db ${id}`);
+
+  return movie;
+}
+
+const getMoviesLimitPrepared = localDb.query.movie
   .findMany({
     columns: {
       id: true,
@@ -52,10 +62,10 @@ const getMoviesLimit = localDb.query.movie
   .prepare();
 
 export const getTopMovies = unstable_cache((limit = 5000) =>
-  getMoviesLimit.execute({ limit })
+  getMoviesLimitPrepared.execute({ limit })
 );
 
-const getMovieOffset = localDb.query.movie
+const getMovieOffsetPrepared = localDb.query.movie
   .findFirst({
     columns: {
       id: true,
@@ -73,10 +83,9 @@ const getMovieOffset = localDb.query.movie
   .prepare();
 
 export async function getRandomMovie(top = 1000) {
-  const randomMovie = await getMovieOffset.execute({
+  const randomMovie = await getMovieOffsetPrepared.execute({
     offset: Math.floor(Math.random() * top),
   });
-
   if (!randomMovie) throw new Error('No random movie found');
 
   return randomMovie;

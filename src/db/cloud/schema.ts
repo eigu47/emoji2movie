@@ -8,3 +8,16 @@ export const emoji = sqliteTable('emoji', {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const session = sqliteTable('session', {
+  id: text().primaryKey(),
+  movieId: text().notNull(),
+  streak: integer().notNull().default(0),
+  bestStreak: integer().notNull().default(0),
+  createdAt: text()
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text()
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
