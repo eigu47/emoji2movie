@@ -18,28 +18,20 @@ export async function getOrCreateGameState(): Promise<GameState> {
     return {
       session,
       movieId: id,
+      guessed: [],
+      hint: [],
       streak: 0,
       bestStreak: 0,
     };
   }
 }
 
-export async function updateGameState({
-  correct,
-  ...state
-}: Partial<GameState & { correct: boolean }>) {
+export async function updateGameState(state: Partial<GameState>) {
   const cookieStore = await cookies();
   const gameCookie = cookieStore.get('game');
   const gameState = gameStateSchema.parse(
     JSON.parse(gameCookie?.value ?? '{}')
   );
-
-  if (correct === true) {
-    gameState.streak++;
-    gameState.bestStreak = Math.max(gameState.bestStreak, gameState.streak);
-  } else if (correct === false) {
-    gameState.streak = 0;
-  }
 
   const newState = { ...gameState, ...state };
   cookieStore.set('game', JSON.stringify(newState));

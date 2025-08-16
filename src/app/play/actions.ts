@@ -1,9 +1,13 @@
 'use server';
 
 import { type GameState, gameStateSchema } from '@/lib/validation';
-import { getRandomEmoji } from '@/server/getEmoji';
-import { getGameState, updateGameState } from '@/server/getGameState';
-import { getMovieById, getTopMovies } from '@/server/getMovies';
+import { getEmoji, getRandomEmoji } from '@/server/getEmoji';
+import {
+  getGameState,
+  getOrCreateGameState,
+  updateGameState,
+} from '@/server/getGameState';
+import { getMovieById, getMovieHint, getTopMovies } from '@/server/getMovies';
 import {
   errorResponse,
   type SuccessResponse,
@@ -33,15 +37,9 @@ export async function getAutocompleteMovies() {
   }
 }
 
-export type GuessResponse = {
-  guessed: number[];
-  hint: number[];
+export type GuessResponse = Omit<GameState, 'session' | 'movieId'> & {
   emoji?: string;
-  answer?: {
-    title: string;
-    year: number;
-    posterPath: string;
-  };
+  answer?: { title: string; year: number; posterPath: string };
 };
 
 export async function submitGuessAction(
@@ -53,43 +51,69 @@ export async function submitGuessAction(
       .object({ guess: z.coerce.number() })
       .parse(Object.fromEntries(form));
 
-    const { movieId } = await getGameState();
+    const { movieId, streak, bestStreak } = await getGameState();
 
     // Correct guess
     if (movieId == guess) {
       const [{ title, year, posterPath }, { emoji, id }] = await Promise.all([
-        getMovieById(guess),
+        getMovieById(movieId),
         getRandomEmoji(),
       ]);
-      await updateGameState({ movieId: id, correct: true });
 
-      return successResponse({
+      const newState = {
         emoji,
         guessed: [],
         hint: [],
+        streak: streak + 1,
+        bestStreak: Math.max(bestStreak, streak + 1),
         answer: {
           title,
           year,
           posterPath,
         },
-      });
+      };
+
+      await updateGameState({ ...newState, movieId: id });
+      return successResponse(newState);
     }
 
     // Incorrect guess
-    return successResponse({
-      ...data,
-      guessed: [...data.guessed, guess],
-    });
-  } catch (error) {
-    console.error('Failed to submit guess: ', error);
+    if (data.hint.length < 3) {
+      const hint = await getMovieHint(movieId, data.hint);
 
-    const { emoji, id } = await getRandomEmoji();
-    await updateGameState({ movieId: id, correct: false });
+      return successResponse({
+        ...data,
+        guessed: [...data.guessed, guess],
+        hint: [...data.hint, hint],
+      });
+    }
 
-    return successResponse({
+    // Game over
+    const [{ title, year, posterPath }, { emoji, id }] = await Promise.all([
+      getMovieById(movieId),
+      getRandomEmoji(),
+    ]);
+
+    const newState = {
       emoji,
       guessed: [],
       hint: [],
-    });
+      streak: 0,
+      bestStreak,
+      answer: {
+        title,
+        year,
+        posterPath,
+      },
+    };
+
+    await updateGameState({ ...newState, movieId: id });
+    return successResponse(newState);
+  } catch (error) {
+    console.error('Failed to submit guess: ', error);
+
+    const state = await getOrCreateGameState();
+    const { emoji } = await getEmoji(state.movieId);
+    return successResponse({ ...state, emoji });
   }
 }

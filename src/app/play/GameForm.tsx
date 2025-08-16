@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/popover';
 import { type ActionState } from '@/lib/types';
 import { useThrottle } from '@/lib/useThrottle';
-import { type Movie } from '@/server/getMovies';
+import { type TopMovies } from '@/server/getMovies';
 import type Fuse from 'fuse.js';
 import { type FuseResult } from 'fuse.js';
 import { startTransition, useEffect, useRef, useState } from 'react';
@@ -38,8 +38,8 @@ export default function GameForm({
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(true);
-  const [results, setResults] = useState<FuseResult<Movie>[]>([]);
-  const fuseRef = useRef<Fuse<Movie>>(null);
+  const [results, setResults] = useState<FuseResult<TopMovies>[]>([]);
+  const fuseRef = useRef<Fuse<TopMovies>>(null);
   const activeItemRef = useRef<string>(undefined);
 
   const throttledSetResults = useThrottle((val: string) => {
@@ -144,7 +144,7 @@ export default function GameForm({
   );
 }
 
-let fusePromise: Promise<Fuse<Movie>> | null = null;
+let fusePromise: Promise<Fuse<TopMovies>> | null = null;
 function getFuse() {
   fusePromise ??= (async () => {
     const [{ default: Fuse }, { error, data: movies }] = await Promise.all([

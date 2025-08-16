@@ -3,11 +3,13 @@
 import { setGameAction, submitGuessAction } from '@/app/play/actions';
 import GameDisplay from '@/app/play/GameDisplay';
 import GameForm from '@/app/play/GameForm';
+import GameHint from '@/app/play/GameHint';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { IMG_BASE_URL } from '@/lib/constants';
 import { getLocalCookie } from '@/lib/localCookies';
+import { deepEqual } from '@/lib/utils';
 import { gameStateSchema, type GameState } from '@/lib/validation';
 import { successResponse } from '@/server/serverResponse';
 import Image from 'next/image';
@@ -22,7 +24,7 @@ export default function GameCard({
 }) {
   const actionState = useActionState(
     submitGuessAction,
-    successResponse({ guessed: [], hint: [] })
+    successResponse(gameState)
   );
   const [
     {
@@ -43,8 +45,11 @@ export default function GameCard({
   useEffect(() => {
     try {
       const gameCookie = getLocalCookie('game');
-      gameStateSchema.parse(JSON.parse(gameCookie ?? '{}'));
-      if (JSON.stringify(gameState) !== gameCookie) throw new Error();
+      const parsedGameCookie = gameStateSchema.parse(
+        JSON.parse(gameCookie ?? '{}')
+      );
+      if (!deepEqual(gameState, parsedGameCookie))
+        throw new Error('Game state mismatch');
     } catch {
       void setGameAction(gameState).then((res) => {
         if (res.error) {
@@ -72,10 +77,6 @@ export default function GameCard({
           <span>
             Question {gameState.streak} of {totalQuestions}
           </span>
-          {/* <span>
-          {Math.round(((movieIds.length - 1) / totalQuestions) * 100)}%
-          Complete
-        </span> */}
         </div>
         <div className="h-2 w-full rounded-full bg-gray-700">
           <div
@@ -90,7 +91,7 @@ export default function GameCard({
         {!emoji ? (
           emojiDisplay
         ) : showPoster && answer ? (
-          <GameDisplay>
+          <GameDisplay className="p-2">
             <Image
               src={IMG_BASE_URL + answer.posterPath}
               alt={`${answer.title} (${answer.year}) movie Poster`}
@@ -102,6 +103,12 @@ export default function GameCard({
         ) : (
           <GameDisplay>{emoji}</GameDisplay>
         )}
+
+        <div className="space-y-2">
+          {hint.map((hint, i) => (
+            <GameHint key={`${hint.text}${i}`} hint={hint} />
+          ))}
+        </div>
 
         {showPoster && answer ? (
           <Button className="w-full" onClick={() => setShowPoster(false)}>
