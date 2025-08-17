@@ -8,11 +8,7 @@ import {
   updateGameState,
 } from '@/server/getGameState';
 import { getMovieById, getMovieHint, getTopMovies } from '@/server/getMovies';
-import {
-  errorResponse,
-  type SuccessResponse,
-  successResponse,
-} from '@/server/serverResponse';
+import { errorResponse, successResponse } from '@/server/serverResponse';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import z from 'zod';
@@ -43,9 +39,9 @@ export type GuessResponse = Omit<GameState, 'session' | 'movieId'> & {
 };
 
 export async function submitGuessAction(
-  { data }: SuccessResponse<GuessResponse>,
+  data: GuessResponse,
   form: FormData
-): Promise<SuccessResponse<GuessResponse>> {
+): Promise<GuessResponse> {
   try {
     const { guess } = z
       .object({ guess: z.coerce.number() })
@@ -74,18 +70,18 @@ export async function submitGuessAction(
       };
 
       await updateGameState({ ...newState, movieId: id });
-      return successResponse(newState);
+      return newState;
     }
 
     // Incorrect guess
     if (data.hint.length < 3) {
       const hint = await getMovieHint(movieId, data.hint);
 
-      return successResponse({
+      return {
         ...data,
         guessed: [...data.guessed, guess],
         hint: [...data.hint, hint],
-      });
+      };
     }
 
     // Game over
@@ -108,12 +104,12 @@ export async function submitGuessAction(
     };
 
     await updateGameState({ ...newState, movieId: id });
-    return successResponse(newState);
+    return newState;
   } catch (error) {
     console.error('Failed to submit guess: ', error);
 
     const state = await getOrCreateGameState();
     const { emoji } = await getEmoji(state.movieId);
-    return successResponse({ ...state, emoji });
+    return { ...state, emoji };
   }
 }

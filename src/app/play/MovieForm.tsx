@@ -29,7 +29,7 @@ import {
   useState,
 } from 'react';
 
-export default function GameForm({
+export default function MovieForm({
   actionState: [{ guessed }, action, isPending],
 }: {
   actionState: ActionState<typeof submitGuessAction>;
