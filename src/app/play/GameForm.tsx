@@ -18,40 +18,42 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { type ActionState } from '@/lib/types';
-import { useThrottle } from '@/lib/useThrottle';
 import { type TopMovies } from '@/server/getMovies';
 import type Fuse from 'fuse.js';
-import { type FuseResult } from 'fuse.js';
-import { startTransition, useEffect, useRef, useState } from 'react';
+import {
+  startTransition,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 export default function GameForm({
-  actionState: [
-    {
-      data: { guessed },
-    },
-    action,
-    isPending,
-  ],
+  actionState: [{ guessed }, action, isPending],
 }: {
   actionState: ActionState<typeof submitGuessAction>;
 }) {
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(true);
-  const [results, setResults] = useState<FuseResult<TopMovies>[]>([]);
-  const fuseRef = useRef<Fuse<TopMovies>>(null);
+  const [fuse, setFuse] = useState<Fuse<TopMovies>>();
   const activeItemRef = useRef<string>(undefined);
 
-  const throttledSetResults = useThrottle((val: string) => {
-    val = val.trim();
-    if (val.length > 10 && results.length == 0) return;
+  const deferredInput = useDeferredValue(input.trim());
+  const resultLength = useRef(0);
 
-    const found = fuseRef.current?.search(val, { limit: 5 }) ?? [];
+  const results = useMemo(() => {
+    if (!fuse) return [];
+    if (deferredInput.length > 10 && resultLength.current == 0) return [];
+
+    const found = fuse.search(deferredInput, { limit: 5 });
     activeItemRef.current = found
       .find(({ item: { id } }) => !guessed.includes(id))
       ?.item.id.toString();
-    setResults(found);
-  }, 100);
+    resultLength.current = found.length;
+    return found;
+  }, [deferredInput, guessed, fuse]);
 
   function openAutocomplete() {
     activeItemRef.current = results
@@ -68,18 +70,11 @@ export default function GameForm({
   }, [isPending]);
 
   useEffect(() => {
-    if (fuseRef.current != null) return;
-
-    getFuse()
-      .then((f) => {
-        fuseRef.current = f;
-        throttledSetResults(inputRef.current?.value ?? '');
-      })
-      .catch(console.error);
+    getFuse().then(setFuse).catch(console.error);
   }, []);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open && !!deferredInput.length} onOpenChange={setOpen}>
       <Command
         value={activeItemRef.current}
         className="bg-transparent"
@@ -101,7 +96,6 @@ export default function GameForm({
             const val = e.currentTarget.value;
             setInput(val);
             setOpen(true);
-            throttledSetResults(val);
           }}
         />
         <PopoverTrigger />
@@ -115,7 +109,7 @@ export default function GameForm({
             <CommandList>
               {results.length == 0 ? (
                 <CommandEmpty className="flex h-10 items-center justify-center p-0">
-                  {fuseRef.current ? 'No results found' : 'Loading movies...'}
+                  {fuse ? 'No results found' : 'Loading movies...'}
                 </CommandEmpty>
               ) : (
                 <CommandGroup>
