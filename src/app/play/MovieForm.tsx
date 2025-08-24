@@ -1,27 +1,25 @@
 'use client';
 
-import {
-  getAutocompleteMovies,
-  type submitGuessAction,
-} from '@/app/play/actions';
+import { type submitGuessAction } from '@/app/play/actions';
+import AutocompletePromise from '@/app/play/FormAutocomplete';
 import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandItem,
   CommandList,
 } from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
-  PopoverTrigger,
 } from '@/components/ui/popover';
 import { type ActionState } from '@/lib/types';
-import { type TopMovies } from '@/server/getMovies';
+import { type TopMovie } from '@/server/getMovies';
 import type Fuse from 'fuse.js';
 import {
   startTransition,
+  Suspense,
   useDeferredValue,
   useEffect,
   useMemo,
@@ -31,15 +29,16 @@ import {
 
 export default function MovieForm({
   actionState: [{ guessed }, action, isPending],
+  autocompletePromise,
 }: {
   actionState: ActionState<typeof submitGuessAction>;
+  autocompletePromise: Promise<TopMovie[]>;
 }) {
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(true);
-  const [fuse, setFuse] = useState<Fuse<TopMovies>>();
+  const [fuse, setFuse] = useState<Fuse<TopMovie>>();
   const activeItemRef = useRef<string>(undefined);
-
   const deferredInput = useDeferredValue(input.trim());
   const resultLength = useRef(0);
 
@@ -69,97 +68,68 @@ export default function MovieForm({
     }
   }, [isPending]);
 
-  useEffect(() => {
-    getFuse().then(setFuse).catch(console.error);
-  }, []);
-
   return (
-    <Popover open={open && !!deferredInput.length} onOpenChange={setOpen}>
-      <Command
-        value={activeItemRef.current}
-        className="bg-transparent"
-        onValueChange={(val) => {
-          activeItemRef.current = val;
+    <Command
+      value={activeItemRef.current}
+      className="bg-transparent"
+      onValueChange={(val) => {
+        activeItemRef.current = val;
+      }}
+      loop
+    >
+      <Input
+        ref={inputRef}
+        placeholder="Enter your guess..."
+        autoFocus
+        className="w-full text-center text-lg"
+        disabled={isPending}
+        value={input}
+        onFocus={openAutocomplete}
+        onClick={openAutocomplete}
+        onBlur={() => setOpen(false)}
+        onChange={(e) => {
+          const val = e.currentTarget.value;
+          setInput(val);
+          setOpen(true);
         }}
-        loop
-      >
-        <Input
-          ref={inputRef}
-          placeholder="Enter your guess..."
-          autoFocus
-          className="w-full text-center text-lg"
-          disabled={isPending}
-          value={input}
-          onFocus={openAutocomplete}
-          onClick={openAutocomplete}
-          onChange={(e) => {
-            const val = e.currentTarget.value;
-            setInput(val);
-            setOpen(true);
-          }}
-        />
-        <PopoverTrigger />
+      />
+      <Popover open={open && deferredInput.length > 0}>
+        <PopoverAnchor />
         <PopoverContent
           asChild
           className="mx-6 w-[calc(512px-48px)] p-0"
           onOpenAutoFocus={(e) => e.preventDefault()}
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
-          {input.length > 0 && (
-            <CommandList>
-              {results.length == 0 ? (
-                <CommandEmpty className="flex h-10 items-center justify-center p-0">
-                  {fuse ? 'No results found' : 'Loading movies...'}
+          <CommandList>
+            <Suspense
+              fallback={
+                <CommandEmpty className="absolute top-10 h-10 items-center justify-center p-0">
+                  Loading movies...
                 </CommandEmpty>
-              ) : (
-                <CommandGroup>
-                  {results.map(({ item: { id, title, year } }) => (
-                    <CommandItem
-                      key={id}
-                      value={id.toString()}
-                      disabled={isPending || guessed.includes(id)}
-                      onSelect={() => {
-                        setInput(title);
-                        setOpen(false);
+              }
+            >
+              <CommandGroup>
+                <AutocompletePromise
+                  guessed={guessed}
+                  isPending={isPending}
+                  results={results}
+                  setFuse={setFuse}
+                  autocompletePromise={autocompletePromise}
+                  onSelect={(movie) => {
+                    setInput(movie.title);
+                    setOpen(false);
 
-                        const form = new FormData();
-                        form.append('guess', id.toString());
-                        startTransition(() => action(form));
-                      }}
-                    >{`${title} (${year})`}</CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-            </CommandList>
-          )}
+                    const form = new FormData();
+                    form.append('guess', movie.id.toString());
+                    startTransition(() => action(form));
+                  }}
+                />
+              </CommandGroup>
+            </Suspense>
+          </CommandList>
         </PopoverContent>
-      </Command>
-    </Popover>
+      </Popover>
+    </Command>
   );
-}
-
-let fusePromise: Promise<Fuse<TopMovies>> | null = null;
-function getFuse() {
-  fusePromise ??= (async () => {
-    const [{ default: Fuse }, { error, data: movies }] = await Promise.all([
-      import('fuse.js'),
-      getAutocompleteMovies(),
-    ]);
-
-    if (error != null) throw new Error(error);
-
-    return new Fuse(movies, {
-      keys: ['title', 'year'],
-      threshold: 0.2,
-      includeScore: false,
-      ignoreDiacritics: true,
-      ignoreLocation: true,
-      minMatchCharLength: 2,
-    });
-  })().catch((err: unknown) => {
-    fusePromise = null;
-    throw err;
-  });
-
-  return fusePromise;
 }

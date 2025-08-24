@@ -64,7 +64,7 @@ export const getTopMovies = unstable_cache((limit = 5000) =>
   getMoviesLimitPrepared.execute({ limit })
 );
 
-export type TopMovies = Awaited<ReturnType<typeof getTopMovies>>[number];
+export type TopMovie = Awaited<ReturnType<typeof getTopMovies>>[number];
 
 const getMovieOffsetPrepared = localDb.query.movie
   .findFirst({

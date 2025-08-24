@@ -7,18 +7,22 @@ import MovieForm from '@/app/play/MovieForm';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { IMG_BASE_URL } from '@/lib/constants';
 import { useSyncGameState } from '@/lib/useSyncGameState';
 import { type GameState } from '@/lib/validation';
+import { getTopMovies, type TopMovie } from '@/server/getMovies';
 import Image from 'next/image';
-import { useActionState, useEffect, useState } from 'react';
+import { Suspense, useActionState, useEffect, useState } from 'react';
 
 export default function GameCard({
   gameState,
   emojiPromise,
+  autocompletePromise,
 }: {
   gameState: GameState;
   emojiPromise: Promise<string>;
+  autocompletePromise: Promise<TopMovie[]>;
 }) {
   useSyncGameState(gameState);
   const actionState = useActionState(submitGuessAction, gameState);
@@ -64,7 +68,13 @@ export default function GameCard({
       <CardContent className="space-y-6">
         {!emoji ? (
           // Initial emoji
-          <EmojiDisplayPromise promise={emojiPromise} />
+          <Suspense
+            fallback={
+              <Skeleton className="h-27 rounded-lg bg-gray-700 shadow-sm" />
+            }
+          >
+            <EmojiDisplayPromise promise={emojiPromise} />
+          </Suspense>
         ) : showPoster && answer ? (
           // Poster
           <EmojiDisplay className="p-2">
@@ -92,7 +102,10 @@ export default function GameCard({
             Next
           </Button>
         ) : (
-          <MovieForm actionState={actionState} />
+          <MovieForm
+            actionState={actionState}
+            autocompletePromise={autocompletePromise}
+          />
         )}
       </CardContent>
     </Card>
