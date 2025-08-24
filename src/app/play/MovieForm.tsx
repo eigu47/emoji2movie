@@ -2,12 +2,7 @@
 
 import { type submitGuessAction } from '@/app/play/actions';
 import AutocompletePromise from '@/app/play/FormAutocomplete';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandList,
-} from '@/components/ui/command';
+import { Command, CommandEmpty, CommandList } from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
 import {
   Popover,
@@ -104,28 +99,26 @@ export default function MovieForm({
           <CommandList>
             <Suspense
               fallback={
-                <CommandEmpty className="absolute top-10 h-10 items-center justify-center p-0">
+                <CommandEmpty className="flex h-10 items-center justify-center p-0">
                   Loading movies...
                 </CommandEmpty>
               }
             >
-              <CommandGroup>
-                <AutocompletePromise
-                  guessed={guessed}
-                  isPending={isPending}
-                  results={results}
-                  setFuse={setFuse}
-                  autocompletePromise={autocompletePromise}
-                  onSelect={(movie) => {
-                    setInput(movie.title);
-                    setOpen(false);
+              <AutocompletePromise
+                guessed={guessed}
+                isPending={isPending}
+                results={results}
+                setFuse={setFuse}
+                autocompletePromise={autocompletePromise}
+                onSelect={(movie) => {
+                  setInput(movie.title);
+                  setOpen(false);
 
-                    const form = new FormData();
-                    form.append('guess', movie.id.toString());
-                    startTransition(() => action(form));
-                  }}
-                />
-              </CommandGroup>
+                  const form = new FormData();
+                  form.append('guess', movie.id.toString());
+                  startTransition(() => action(form));
+                }}
+              />
             </Suspense>
           </CommandList>
         </PopoverContent>

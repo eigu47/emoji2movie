@@ -16,14 +16,17 @@ const getEmojiByIdPrepared = cloudDb.query.emoji
   })
   .prepare();
 
-export async function getEmoji(id: number) {
+const MAX_RETRIES = 5;
+
+export async function getEmoji(id: number, retryCount = 0) {
   try {
     const cachedEmoji = await getEmojiByIdPrepared.execute({ id });
-
     if (cachedEmoji) return cachedEmoji;
 
-    const { title, year } = await getMovieById(id);
+    if (retryCount >= MAX_RETRIES)
+      throw new Error(`Max retries reached for movie ID ${id}`);
 
+    const { title, year } = await getMovieById(id);
     const { text } = await generateText({
       model: openai('gpt-4o-mini'),
       temperature: 0.3,
@@ -35,14 +38,23 @@ Output only the 5 emojis with no spaces, no text, and no explanations.`,
       prompt: `Movie: ${title} (${year})`,
     });
 
-    const generatedEmoji = z
+    const { success, data } = z
       .string()
       .transform((str) =>
         str.replace(/[^(\p{Extended_Pictographic}|\p{Emoji_Component})]/gu, '')
       )
-      .parse(text);
-    const newEmoji = { id, emoji: generatedEmoji };
+      .refine((str) => {
+        const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
+        return Array.from(segmenter.segment(str)).length === 5;
+      })
+      .safeParse(text);
 
+    if (!success) {
+      console.warn(`Emoji validation failed for ${title}: ${text}`);
+      return await getEmoji(id, retryCount + 1);
+    }
+
+    const newEmoji = { id, emoji: data };
     await cloudDb
       .insert(emoji)
       .values(newEmoji)

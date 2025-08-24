@@ -1,4 +1,8 @@
-import { CommandEmpty, CommandItem } from '@/components/ui/command';
+import {
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from '@/components/ui/command';
 import { type ReactSetState } from '@/lib/types';
 import { type TopMovie } from '@/server/getMovies';
 import Fuse, { type FuseResult } from 'fuse.js';
@@ -41,12 +45,16 @@ export default function AutocompletePromise({
       </CommandEmpty>
     );
 
-  return results.map(({ item }) => (
-    <CommandItem
-      key={item.id}
-      value={item.id.toString()}
-      disabled={isPending || guessed.includes(item.id)}
-      onSelect={() => onSelect(item)}
-    >{`${item.title} (${item.year})`}</CommandItem>
-  ));
+  return (
+    <CommandGroup>
+      {results.map(({ item }) => (
+        <CommandItem
+          key={item.id}
+          value={item.id.toString()}
+          disabled={isPending || guessed.includes(item.id)}
+          onSelect={() => onSelect(item)}
+        >{`${item.title} (${item.year})`}</CommandItem>
+      ))}
+    </CommandGroup>
+  );
 }
