@@ -1,29 +1,11 @@
 'use server';
 
-import { type GameState, gameStateSchema } from '@/lib/validation';
+import { type GameState } from '@/lib/validation';
 import { getEmoji, getRandomEmoji } from '@/server/getEmoji';
-import {
-  getGameState,
-  getOrCreateGameState,
-  updateGameState,
-} from '@/server/getGameState';
+import { getGameState, updateGameState } from '@/server/getGameState';
 import { getMovieById, getMovieHint, getTopMovies } from '@/server/getMovies';
 import { errorResponse, successResponse } from '@/server/serverResponse';
-import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
 import z from 'zod';
-
-export async function setGameAction(gameState: GameState) {
-  try {
-    const parsedGameState = gameStateSchema.parse(gameState);
-    const cookieStore = await cookies();
-    cookieStore.set('game', JSON.stringify(parsedGameState));
-    return successResponse(parsedGameState);
-  } catch {
-    revalidatePath('/play');
-    return errorResponse('Failed to set game state');
-  }
-}
 
 export async function getAutocompleteMovies() {
   try {
@@ -38,8 +20,23 @@ export type GuessResponse = Omit<GameState, 'session' | 'movieId'> & {
   answer?: { title: string; year: number; posterPath: string };
 };
 
+export type NextRoundResponse = {
+  emoji: string;
+  guessed: number[];
+  hint: GameState['hint'];
+};
+
+// Prefetch next round (new movie + emoji) - called in background
+export async function startNextRoundAction(): Promise<NextRoundResponse> {
+  const { emoji, id } = await getRandomEmoji();
+
+  await updateGameState({ movieId: id, guessed: [], hint: [] });
+
+  return { emoji, guessed: [], hint: [] };
+}
+
 export async function submitGuessAction(
-  data: GuessResponse,
+  _prevState: GuessResponse,
   form: FormData
 ): Promise<GuessResponse> {
   try {
@@ -47,69 +44,66 @@ export async function submitGuessAction(
       .object({ guess: z.coerce.number() })
       .parse(Object.fromEntries(form));
 
-    const { movieId, streak, bestStreak } = await getGameState();
+    // Read ALL state from cookie (single source of truth)
+    const { movieId, guessed, hint, streak, bestStreak } = await getGameState();
 
-    // Correct guess
-    if (movieId == guess) {
-      const [{ title, year, posterPath }, { emoji, id }] = await Promise.all([
-        getMovieById(movieId),
-        getRandomEmoji(),
-      ]);
+    // Correct guess - only fetch poster, don't fetch new movie/emoji yet
+    if (movieId === guess) {
+      const { title, year, posterPath } = await getMovieById(movieId);
 
+      const newStreak = streak + 1;
+      const newBestStreak = Math.max(bestStreak, newStreak);
+
+      // Update streak in cookie, but keep same movieId (will be updated by startNextRoundAction)
+      await updateGameState({
+        streak: newStreak,
+        bestStreak: newBestStreak,
+      });
+
+      return {
+        guessed,
+        hint,
+        streak: newStreak,
+        bestStreak: newBestStreak,
+        answer: { title, year, posterPath },
+      };
+    }
+
+    // Incorrect guess - still have hints left
+    if (hint.length < 3) {
+      const newHint = await getMovieHint(movieId, hint);
       const newState = {
-        emoji,
-        guessed: [],
-        hint: [],
-        streak: streak + 1,
-        bestStreak: Math.max(bestStreak, streak + 1),
-        answer: {
-          title,
-          year,
-          posterPath,
-        },
+        guessed: [...guessed, guess],
+        hint: [...hint, newHint],
+        streak,
+        bestStreak,
       };
 
-      await updateGameState({ ...newState, movieId: id });
+      await updateGameState(newState);
+
       return newState;
     }
 
-    // Incorrect guess
-    if (data.hint.length < 3) {
-      const hint = await getMovieHint(movieId, data.hint);
+    // Game over - only fetch poster, don't fetch new movie/emoji yet
+    const { title, year, posterPath } = await getMovieById(movieId);
 
-      return {
-        ...data,
-        guessed: [...data.guessed, guess],
-        hint: [...data.hint, hint],
-      };
-    }
+    // Reset streak in cookie
+    await updateGameState({ streak: 0 });
 
-    // Game over
-    const [{ title, year, posterPath }, { emoji, id }] = await Promise.all([
-      getMovieById(movieId),
-      getRandomEmoji(),
-    ]);
-
-    const newState = {
-      emoji,
-      guessed: [],
-      hint: [],
+    return {
+      guessed,
+      hint,
       streak: 0,
       bestStreak,
-      answer: {
-        title,
-        year,
-        posterPath,
-      },
+      answer: { title, year, posterPath },
     };
-
-    await updateGameState({ ...newState, movieId: id });
-    return newState;
   } catch (error) {
     console.error('Failed to submit guess: ', error);
 
-    const state = await getOrCreateGameState();
-    const { emoji } = await getEmoji(state.movieId);
-    return { ...state, emoji };
+    // Recovery: read current state from cookie and return it
+    const { guessed, hint, streak, bestStreak, movieId } = await getGameState();
+    const { emoji } = await getEmoji(movieId);
+
+    return { guessed, hint, streak, bestStreak, emoji };
   }
 }
