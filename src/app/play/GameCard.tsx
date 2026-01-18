@@ -1,7 +1,8 @@
 'use client';
 
 import {
-  type NextRoundResponse,
+  getGameStateAction,
+  type GuessResponse,
   startNextRoundAction,
   submitGuessAction,
 } from '@/app/play/actions';
@@ -12,84 +13,65 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { IMG_BASE_URL } from '@/lib/constants';
-import { type GameState } from '@/lib/validation';
+import { IMG_BASE_URL, TOTAL_QUESTIONS } from '@/lib/constants';
 import { type TopMovie } from '@/server/getMovies';
 import Image from 'next/image';
-import {
-  Suspense,
-  useActionState,
-  useEffect,
-  useRef,
-  useState,
-  useTransition,
-} from 'react';
+import { Suspense, useEffect, useState, useTransition } from 'react';
 
 export default function GameCard({
-  gameState,
+  gameState: gameStateServer,
   emojiPromise,
   autocompletePromise,
 }: {
-  gameState: GameState;
-  emojiPromise: Promise<string>;
+  gameState: GuessResponse | null;
+  emojiPromise: Promise<string> | null;
   autocompletePromise: Promise<TopMovie[]>;
 }) {
-  const actionState = useActionState(submitGuessAction, gameState);
-  const [state] = actionState;
-
-  const [showPoster, setShowPoster] = useState(false);
-  const [nextRound, setNextRound] = useState<NextRoundResponse | null>(null);
-  const [activeRound, setActiveRound] = useState<NextRoundResponse | null>(
-    null
+  const [gameState, setGameState] = useState(
+    gameStateServer ?? { guessed: [], hint: [], streak: 0, bestStreak: 0 }
   );
-  const [isLoadingNext, startTransition] = useTransition();
-  const prefetchStarted = useRef(false);
+  const [showPoster, setShowPoster] = useState(false);
+  const [nextEmoji, setNextEmoji] = useState<string | null>(null);
+  const [isLoadingNext, startTransitionNext] = useTransition();
+  const [isLoadingGuess, startTransitionGuess] = useTransition();
 
-  // Derive display values: use activeRound (prefetched) if set, otherwise action state
-  const displayEmoji = activeRound?.emoji ?? state.emoji;
-  const displayHint = activeRound?.hint ?? state.hint;
-  const displayAnswer = activeRound ? undefined : state.answer;
-  const { streak, bestStreak } = state;
+  const { hint, streak, bestStreak, answer, emoji } = gameState;
 
-  // Start prefetching next round when answer is shown
   useEffect(() => {
-    if (state.answer?.posterPath && !prefetchStarted.current) {
-      prefetchStarted.current = true;
-      setShowPoster(true);
-      setActiveRound(null); // Clear any previous active round
+    void (async () => {
+      if (!gameStateServer) {
+        const state = await getGameStateAction();
+        setGameState(state);
+      }
+    })();
+  }, [gameStateServer]);
 
-      // Prefetch next round in background
-      startTransition(async () => {
-        const result = await startNextRoundAction();
-        setNextRound(result);
-      });
-    }
-  }, [state.answer?.posterPath]);
+  function handleGuess(movieId: number) {
+    startTransitionGuess(async () => {
+      const state = await submitGuessAction(movieId);
+      setGameState(state);
 
-  // Reset prefetch flag when action state changes (new guess submitted)
-  useEffect(() => {
-    if (!state.answer) {
-      prefetchStarted.current = false;
-    }
-  }, [state.answer]);
+      // Start prefetching next round when answer is shown
+      if (state.answer?.posterPath) {
+        setShowPoster(true);
+        startTransitionNext(async () => {
+          const { emoji } = await startNextRoundAction();
+          setNextEmoji(emoji);
+        });
+      }
+    });
+  }
 
-  const handleNextClick = () => {
-    if (nextRound) {
-      // Apply prefetched state to display
-      setActiveRound(nextRound);
-      setNextRound(null);
-      setShowPoster(false);
-    }
-  };
-
-  // Clear activeRound when a new guess is submitted (action state updates)
-  useEffect(() => {
-    if (state.emoji && !state.answer) {
-      setActiveRound(null);
-    }
-  }, [state.emoji, state.answer]);
-
-  const totalQuestions = 10;
+  function handleNextRound() {
+    if (!nextEmoji) return;
+    setShowPoster(false);
+    setGameState((prev) => ({
+      ...prev,
+      guessed: [],
+      hint: [],
+      emoji: nextEmoji,
+    }));
+  }
 
   return (
     <Card className="w-full max-w-lg border-gray-700 bg-gray-800">
@@ -102,7 +84,7 @@ export default function GameCard({
             variant="secondary"
             className="bg-gray-700 px-3 py-1 text-lg text-gray-200"
           >
-            {streak}/{totalQuestions}
+            {streak}/{TOTAL_QUESTIONS}
           </Badge>
         </div>
         <div className="flex justify-between text-sm text-gray-400">
@@ -112,13 +94,13 @@ export default function GameCard({
           <div
             className="h-2 rounded-full bg-purple-600 transition-all duration-300"
             style={{
-              width: `${(streak / totalQuestions) * 100}%`,
+              width: `${(streak / TOTAL_QUESTIONS) * 100}%`,
             }}
           />
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {!displayEmoji ? (
+        {!emoji && emojiPromise ? (
           // Initial emoji from server
           <Suspense
             fallback={
@@ -127,39 +109,44 @@ export default function GameCard({
           >
             <EmojiDisplayPromise promise={emojiPromise} />
           </Suspense>
-        ) : showPoster && displayAnswer ? (
+        ) : showPoster && answer ? (
           // Poster for correct/game-over
           <EmojiDisplay className="p-2">
             <Image
-              src={IMG_BASE_URL + displayAnswer.posterPath}
-              alt={`${displayAnswer.title} (${String(displayAnswer.year)}) movie Poster`}
+              src={IMG_BASE_URL + answer.posterPath}
+              alt={`${answer.title} (${String(answer.year)}) movie Poster`}
               className="mx-auto rounded-lg object-cover"
               width={200}
               height={300}
             />
           </EmojiDisplay>
+        ) : !emoji && !nextEmoji ? (
+          // Loading...
+          <Skeleton className="h-27 rounded-lg bg-gray-700 shadow-sm" />
         ) : (
           // Emoji from action response
-          <EmojiDisplay>{displayEmoji}</EmojiDisplay>
+          <EmojiDisplay>{emoji ?? nextEmoji}</EmojiDisplay>
         )}
 
         <div className="space-y-2">
-          {displayHint.map((h, i) => (
+          {hint.map((h, i) => (
             <Hint key={`${h.text}${String(i)}`} hint={h} />
           ))}
         </div>
 
-        {showPoster && displayAnswer ? (
+        {showPoster && answer ? (
           <Button
             className="w-full"
-            onClick={handleNextClick}
-            disabled={isLoadingNext && !nextRound}
+            onClick={handleNextRound}
+            disabled={isLoadingNext && !nextEmoji}
           >
-            {isLoadingNext && !nextRound ? 'Loading...' : 'Next'}
+            {isLoadingNext && !nextEmoji ? 'Loading...' : 'Next'}
           </Button>
         ) : (
           <MovieForm
-            actionState={actionState}
+            gameState={gameState}
+            isLoadingGuess={isLoadingGuess}
+            handleGuess={handleGuess}
             autocompletePromise={autocompletePromise}
           />
         )}

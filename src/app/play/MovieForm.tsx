@@ -1,6 +1,6 @@
 'use client';
 
-import { type submitGuessAction } from '@/app/play/actions';
+import { type GuessResponse } from '@/app/play/actions';
 import AutocompletePromise from '@/app/play/FormAutocomplete';
 import { Command, CommandEmpty, CommandList } from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
@@ -9,11 +9,9 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from '@/components/ui/popover';
-import { type ActionState } from '@/lib/types';
 import { type TopMovie } from '@/server/getMovies';
 import type Fuse from 'fuse.js';
 import {
-  startTransition,
   Suspense,
   useDeferredValue,
   useEffect,
@@ -23,10 +21,16 @@ import {
 } from 'react';
 
 export default function MovieForm({
-  actionState: [{ guessed }, action, isPending],
+  // actionState: [{ guessed }, action, isPending],
+  gameState: { guessed },
+  isLoadingGuess,
+  handleGuess,
   autocompletePromise,
 }: {
-  actionState: ActionState<typeof submitGuessAction>;
+  // actionState: ActionState<typeof submitGuessAction>;
+  gameState: GuessResponse;
+  isLoadingGuess: boolean;
+  handleGuess: (movieId: number) => void;
   autocompletePromise: Promise<TopMovie[]>;
 }) {
   const [input, setInput] = useState('');
@@ -57,11 +61,11 @@ export default function MovieForm({
   }
 
   useEffect(() => {
-    if (!isPending) {
+    if (!isLoadingGuess) {
       inputRef.current?.focus();
       inputRef.current?.select();
     }
-  }, [isPending]);
+  }, [isLoadingGuess]);
 
   return (
     <Command
@@ -77,7 +81,7 @@ export default function MovieForm({
         placeholder="Enter your guess..."
         autoFocus
         className="w-full text-center text-lg"
-        disabled={isPending}
+        disabled={isLoadingGuess}
         value={input}
         onFocus={openAutocomplete}
         onClick={openAutocomplete}
@@ -106,17 +110,14 @@ export default function MovieForm({
             >
               <AutocompletePromise
                 guessed={guessed}
-                isPending={isPending}
+                isPending={isLoadingGuess}
                 results={results}
                 setFuse={setFuse}
                 autocompletePromise={autocompletePromise}
                 onSelect={(movie) => {
                   setInput(movie.title);
                   setOpen(false);
-
-                  const form = new FormData();
-                  form.append('guess', movie.id.toString());
-                  startTransition(() => action(form));
+                  handleGuess(movie.id);
                 }}
               />
             </Suspense>

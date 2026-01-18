@@ -69,7 +69,7 @@ Output only the 5 emojis with no spaces, no text, and no explanations.`,
 }
 
 export async function getRandomEmoji() {
-  const movie = await getRandomMovie(1000);
+  const movie = await getRandomMovie();
   const emoji = await getEmoji(movie.id);
   return { ...movie, ...emoji };
 }

@@ -10,7 +10,7 @@ export type Hint = z.infer<typeof hintSchema>;
 
 export const gameStateSchema = z.object({
   session: z.uuid(),
-  movieId: z.number().int().positive(),
+  movieId: z.number().int().positive().nullable(),
   guessed: z.array(z.number().int().positive()).max(10),
   hint: z.array(hintSchema).max(3),
   streak: z.number().int().nonnegative(),
@@ -18,3 +18,6 @@ export const gameStateSchema = z.object({
 });
 
 export type GameState = z.infer<typeof gameStateSchema>;
+export type GameStateWithMovieId = GameState & {
+  movieId: NonNullable<GameState['movieId']>;
+};
