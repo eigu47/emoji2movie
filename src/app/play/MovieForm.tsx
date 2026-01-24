@@ -21,16 +21,14 @@ import {
 } from 'react';
 
 export default function MovieForm({
-  // actionState: [{ guessed }, action, isPending],
   gameState: { guessed },
   isLoadingGuess,
   handleGuess,
   autocompletePromise,
 }: {
-  // actionState: ActionState<typeof submitGuessAction>;
   gameState: GuessResponse;
   isLoadingGuess: boolean;
-  handleGuess: (movieId: number) => void;
+  handleGuess: (movieId: number) => Promise<void>;
   autocompletePromise: Promise<TopMovie[]>;
 }) {
   const [input, setInput] = useState('');
@@ -117,7 +115,7 @@ export default function MovieForm({
                 onSelect={(movie) => {
                   setInput(movie.title);
                   setOpen(false);
-                  handleGuess(movie.id);
+                  void handleGuess(movie.id);
                 }}
               />
             </Suspense>

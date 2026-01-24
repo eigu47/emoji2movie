@@ -13,7 +13,7 @@ export default async function Play() {
   return (
     <div className="mt-[10dvh] flex min-h-dvh flex-col items-center">
       <GameCard
-        gameState={gameState && filterGameState(gameState)}
+        gameState={gameState?.movieId ? filterGameState(gameState) : null}
         emojiPromise={emojiPromise}
         autocompletePromise={autocompletePromise}
       />

@@ -53,7 +53,7 @@ export default function AutocompletePromise({
           value={item.id.toString()}
           disabled={isPending || guessed.includes(item.id)}
           onSelect={() => onSelect(item)}
-        >{`${item.title} (${item.year})`}</CommandItem>
+        >{`${item.title} (${String(item.year)})`}</CommandItem>
       ))}
     </CommandGroup>
   );

@@ -23,7 +23,7 @@ export type GuessResponse = GameStateFront & {
 };
 
 // Prefetch next round (new movie + emoji) - called in background
-export async function startNextRoundAction() {
+export async function getNewMovieAction() {
   const { emoji, id } = await getRandomEmoji();
 
   await updateGameState({ movieId: id, guessed: [], hint: [] });
@@ -52,7 +52,7 @@ export async function submitGuessAction(
         hint: [],
       };
 
-      // Update streak in cookie, but keep same movieId (will be updated by startNextRoundAction)
+      // Update streak in cookie, remove movieId (will be updated by getNewMovieAction)
       await updateGameState({
         ...newState,
         movieId: null,
@@ -65,7 +65,6 @@ export async function submitGuessAction(
     }
 
     // Incorrect guess - still have hints left
-    const response = filterGameState(state);
     if (hint.length < 3) {
       const newHint = await getMovieHint(movieId, hint);
       const newState = {
@@ -76,8 +75,9 @@ export async function submitGuessAction(
       await updateGameState(newState);
 
       return {
-        ...response,
         ...newState,
+        streak,
+        bestStreak,
       };
     }
 
@@ -88,7 +88,9 @@ export async function submitGuessAction(
     await updateGameState({ movieId: null, streak: 0 });
 
     return {
-      ...response,
+      bestStreak,
+      guessed,
+      hint: [],
       streak: 0,
       answer: { title, year, posterPath },
     };
