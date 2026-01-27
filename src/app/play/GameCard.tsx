@@ -110,6 +110,13 @@ export default function GameCard({
                 unoptimized
               />
             </EmojiDisplay>
+            <div className="space-y-1 text-center text-white">
+              <p className="text-xs tracking-[0.2em] text-purple-200 uppercase">
+                {streak === 0 ? 'Game over' : 'Correct!'}
+              </p>
+              <p className="text-xl font-semibold text-white">{answer.title}</p>
+              <p className="text-sm text-gray-300">{answer.year}</p>
+            </div>
             <Button autoFocus className="w-full" onClick={handleNextRound}>
               Next
             </Button>

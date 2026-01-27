@@ -1,7 +1,9 @@
 import localDb from '@/db/local';
 import { HINT_TYPE } from '@/lib/constants';
+import env from '@/lib/env';
 import { sql } from 'drizzle-orm';
 import { unstable_cache } from 'next/cache';
+import z from 'zod';
 
 export function getMovieList(ids: number[] | undefined) {
   return localDb.query.movie.findMany({
@@ -37,7 +39,7 @@ const getMovieByIdPrepared = localDb.query.movie
 
 export async function getMovieById(id: number) {
   const movie = await getMovieByIdPrepared.execute({ id });
-  if (!movie) throw new Error(`Movie not found in db ${id}`);
+  if (!movie) throw new Error(`Movie not found in db ${String(id)}`);
 
   return movie;
 }
@@ -110,7 +112,7 @@ export async function getMovieHint(
   currHints: { type: (typeof HINT_TYPE)[number] }[] = []
 ) {
   const movie = await getMovieForHintPrepared.execute({ id });
-  if (!movie) throw new Error(`Movie not found in db ${id}`);
+  if (!movie) throw new Error(`Movie not found in db ${String(id)}`);
 
   if (movie.title === movie.originalTitle) {
     currHints = [...currHints, { type: 'originalTitle' }];
@@ -120,7 +122,7 @@ export async function getMovieHint(
     (type) => !currHints.some((h) => h.type === type)
   );
   const type = hintType[Math.floor(Math.random() * hintType.length)];
-  let text;
+  let text: string;
 
   switch (type) {
     case 'releaseDate':
@@ -141,8 +143,37 @@ export async function getMovieHint(
     case 'originalTitle':
       text = movie.originalTitle;
       break;
+    case 'leadingActor':
+      try {
+        const res = await fetch(
+          `https://api.themoviedb.org/3/movie/${String(movie.id)}/credits?language=en-US`,
+          {
+            headers: {
+              Authorization: `Bearer ${env.TMDB_API_KEY}`,
+              accept: 'application/json',
+            },
+          }
+        );
+        if (!res.ok) {
+          throw new Error(`TMDB request failed: ${res.statusText}`);
+        }
+        const data = (await res.json()) as unknown;
+        const { cast } = z
+          .object({
+            cast: z.array(z.object({ name: z.string() })).min(1),
+          })
+          .parse(data);
+
+        text = cast[0]!.name;
+      } catch (err) {
+        console.error('Failed to fetch actor: ', err);
+
+        // Try again different hint
+        return await getMovieHint(id, [...currHints, { type: 'leadingActor' }]);
+      }
+      break;
     default:
-      throw new Error(`Invalid hint type: ${type}`);
+      throw new Error(`Invalid hint type: ${String(type)}`);
   }
 
   return {
